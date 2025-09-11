@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { AdminProtectedRoute } from '@/components/auth/admin-protected-route';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -308,7 +309,8 @@ export default function ConfigWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <AdminProtectedRoute fallbackMessage="Configuration settings require administrator access. Only admin users can modify system configuration.">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
@@ -857,5 +859,6 @@ export default function ConfigWizard() {
         </Card>
       </div>
     </div>
+    </AdminProtectedRoute>
   );
 }
