@@ -360,3 +360,6 @@ export const bulkNotifyUsers = functions.https.onCall(async (data, context) => {
   const results = await pushService.bulkNotifyUsers(data.userIds, data.notification);
   return { success: true, results };
 });
+
+// Export admin setup functions
+export { createAdminUser, makeUserAdmin, listAdminUsers } from './adminSetup';

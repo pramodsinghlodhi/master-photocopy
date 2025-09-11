@@ -25,8 +25,8 @@ echo "✅ Firebase CLI is ready"
 echo ""
 
 # Get project ID
-PROJECT_ID=$(firebase use | grep "active project" | sed 's/.*project: \([^)]*\).*/\1/')
-if [ -z "$PROJECT_ID" ]; then
+PROJECT_ID=$(firebase use 2>/dev/null | head -1)
+if [ -z "$PROJECT_ID" ] || [ "$PROJECT_ID" = "Error: No project active. Run with" ]; then
     echo "❌ No active Firebase project found. Please set one:"
     echo "   firebase use --add"
     exit 1
