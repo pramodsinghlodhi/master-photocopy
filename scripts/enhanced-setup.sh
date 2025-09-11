@@ -234,17 +234,19 @@ main() {
     echo "  npm run seed         - Seed database with sample data"
     echo "  firebase deploy      - Deploy to production"
     echo ""
-    print_info "Access Points:"
-    echo "  📱 Main App:         http://localhost:9002"
-    echo "  🔧 Admin Panel:      http://localhost:9002/admin"
-    echo "  📊 Firebase UI:      http://localhost:4000 (when emulators running)"
-    echo "  🛠️  Installation:     http://localhost:9002/install"
+    print_info "📞 IMMEDIATE ACCESS"
+    echo "Since your application is currently running:"
+    echo "  🏠 Main Application: https://master-photocopy--master-photocopy.us-central1.hosted.app"
+    echo "  �️ Installation Guide: https://master-photocopy--master-photocopy.us-central1.hosted.app/install"
+    echo "  ⚙️ Configuration: https://master-photocopy--master-photocopy.us-central1.hosted.app/config"
+    echo "  👨‍💼 Admin Panel: https://master-photocopy--master-photocopy.us-central1.hosted.app/admin"
+    echo "  ❤️ Health Check: https://master-photocopy--master-photocopy.us-central1.hosted.app/api/health"
     echo ""
-    print_warning "Next Steps:"
+    print_warning "Local Development (optional):"
     echo "  1. Start the development server: npm run dev"
-    echo "  2. Visit http://localhost:9002/install for guided setup"
-    echo "  3. Configure your Firebase project settings"
-    echo "  4. Test the application features"
+    echo "  2. Visit http://localhost:9002 for local development"
+    echo "  3. Run Firebase emulators: npm run emulators"
+    echo "  4. Use local Firebase UI: http://localhost:4000"
     echo ""
 }
 
@@ -263,7 +265,7 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
 NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abcdef123456
 
 # Application Configuration
-NEXT_PUBLIC_APP_URL=http://localhost:9002
+NEXT_PUBLIC_APP_URL=https://master-photocopy--master-photocopy.us-central1.hosted.app
 NEXT_PUBLIC_APP_NAME="Masterphoto Copy"
 
 # Emulator Configuration

@@ -1,5 +1,8 @@
 {
   "projects": {
-    "default": "demo-masterphotocopy"
-  }
+    "default": "master-photocopy",
+    "defult": "master-photocopy"
+  },
+  "targets": {},
+  "etags": {}
 }

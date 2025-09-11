@@ -1,0 +1,49 @@
+type User @table {
+  username: String!
+  passwordHash: String!
+  role: String!
+  createdAt: Timestamp!
+  email: String
+  firstName: String
+  lastName: String
+  phoneNumber: String
+}
+
+type Order @table {
+  customer: User!
+  assignedEmployee: User
+  orderDate: Timestamp!
+  status: String!
+  totalAmount: Float!
+  paymentStatus: String!
+  dueDate: Timestamp
+  pickupOrDelivery: String
+  deliveryAddress: String
+  deliveryInstructions: String
+}
+
+type OrderItem @table {
+  order: Order!
+  description: String!
+  quantity: Int!
+  unitPrice: Float!
+  printingOptions: String
+  documentUrl: String
+}
+
+type Payment @table {
+  order: Order!
+  paymentDate: Timestamp!
+  amount: Float!
+  paymentMethod: String!
+  transactionId: String
+}
+
+type DeliveryTracking @table {
+  order: Order!
+  deliveryPerson: User
+  trackingStatus: String!
+  statusUpdateTime: Timestamp!
+  deliveryNotes: String
+  deliveryConfirmationPhotoUrl: String
+}

@@ -112,10 +112,10 @@ export default function ConfigWizard() {
   });
   
   const [deploymentConfig, setDeploymentConfig] = useState({
-    environment: 'development',
-    domain: 'localhost:9002',
-    httpsEnabled: false,
-    corsOrigins: ['http://localhost:9002'],
+    environment: 'production',
+    domain: 'master-photocopy--master-photocopy.us-central1.hosted.app',
+    httpsEnabled: true,
+    corsOrigins: ['https://master-photocopy--master-photocopy.us-central1.hosted.app'],
     rateLimiting: true
   });
 

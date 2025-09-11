@@ -16,21 +16,22 @@
   },
   "main": "lib/index.js",
   "dependencies": {
-    "firebase-admin": "^12.0.0",
-    "firebase-functions": "^5.0.0",
-    "express": "^4.18.2",
+    "@dataconnect/generated": "file:src/dataconnect-generated",
+    "axios": "^1.6.0",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
-    "axios": "^1.6.0"
+    "express": "^4.18.2",
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^5.0.0"
   },
   "devDependencies": {
-    "typescript": "^4.9.0",
-    "@types/express": "^4.17.17",
     "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.17",
     "@typescript-eslint/eslint-plugin": "^6.13.1",
     "@typescript-eslint/parser": "^6.13.1",
     "eslint": "^8.54.0",
-    "eslint-plugin-import": "^2.29.0"
+    "eslint-plugin-import": "^2.29.0",
+    "typescript": "^4.9.0"
   },
   "private": true
 }

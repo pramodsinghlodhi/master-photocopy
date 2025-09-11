@@ -54,7 +54,17 @@ chmod +x scripts/enhanced-setup.sh
 npm run dev
 ```
 
-🎉 **That's it!** Visit `http://localhost:9002` to see your application.
+🎉 **Your app is live!** Visit the hosted application at:
+
+### 📞 IMMEDIATE ACCESS
+Since your application is currently running:
+* 🏠 **Main Application:** https://master-photocopy--master-photocopy.us-central1.hosted.app
+* 🛠️ **Installation Guide:** https://master-photocopy--master-photocopy.us-central1.hosted.app/install
+* ⚙️ **Configuration:** https://master-photocopy--master-photocopy.us-central1.hosted.app/config
+* 👨‍💼 **Admin Panel:** https://master-photocopy--master-photocopy.us-central1.hosted.app/admin
+* ❤️ **Health Check:** https://master-photocopy--master-photocopy.us-central1.hosted.app/api/health
+
+For local development, you can also run `npm run dev` and access `http://localhost:9002`.
 
 ## 📦 Installation Methods
 
@@ -69,12 +79,13 @@ npm run dev
    ```
 
 2. **Visit Installation Page**
-   - Start the development server: `npm run dev`
-   - Go to: `http://localhost:9002/install`
+   - Start the development server: `npm run dev` (for local development)
+   - Or use the live app: `https://master-photocopy--master-photocopy.us-central1.hosted.app/install`
    - Follow the guided setup wizard
 
 3. **Configuration Wizard**
-   - Visit: `http://localhost:9002/config`
+   - Visit: `https://master-photocopy--master-photocopy.us-central1.hosted.app/config` (live)
+   - Or locally: `http://localhost:9002/config` (if running dev server)
    - Configure all services and integrations
 
 ### Method 2: Manual Installation
@@ -586,7 +597,9 @@ Now that your environment is configured, you can run the app.
     npm run dev
     ```
 
-Your application should now be running at `http://localhost:9002` and fully connected to your Firebase project. You can sign up, log in, and place orders.
+Your application is now live at `https://master-photocopy--master-photocopy.us-central1.hosted.app` and fully connected to your Firebase project. You can sign up, log in, and place orders.
+
+For local development, run `npm run dev` and access `http://localhost:9002`.
 
 ---
 

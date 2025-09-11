@@ -1,0 +1,26 @@
+mutation CreateDocument @auth(level: USER) {
+  document_insert(data: {
+    ownerUid_expr: "auth.uid",
+    createdAt_expr: "request.time"
+  })
+}
+
+query ListMyDocuments @auth(level: USER) {
+  documents(where: {ownerUid: {eq_expr: "auth.uid"}}) {
+    id
+    title
+    createdAt
+  }
+}
+
+mutation UpdateDocument($id: UUID!, $title: String, $content: String) @auth(level: USER) {
+  document_update(key: {id: $id}, data: {
+    title: $title,
+    content: $content,
+    updatedAt_expr: "request.time"
+  })
+}
+
+mutation DeleteDocument($id: UUID!) @auth(level: USER) {
+  document_delete(key: {id: $id})
+}
