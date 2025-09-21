@@ -24,8 +24,15 @@ interface PriceSummaryProps {
   totalCost: number;
 }
 
-const URGENT_FEE = 25; 
-const OUT_OF_AREA_FEE = 50;
+// TODO: Replace with actual distance calculation API (e.g., Google Maps)
+async function calculateDistance(origin: string, destination: string): Promise<number> {
+  console.log(`Calculating distance between ${origin} and ${destination}`);
+  // This is a mock calculation. Returns a random distance between 1 and 50 km.
+  const mockDistance = Math.random() * 49 + 1;
+  console.log(`Mock distance: ${mockDistance.toFixed(2)} km`);
+  return Promise.resolve(mockDistance);
+}
+
 
 declare global {
     interface Window {
@@ -42,8 +49,68 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
   const [paymentMethod, setPaymentMethod] = React.useState('online');
   const [isUrgent, setIsUrgent] = React.useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = React.useState(false);
+  const [shippingFee, setShippingFee] = React.useState(0);
+  const [shippingLoading, setShippingLoading] = React.useState(true);
+  const [settings, setSettings] = React.useState<any>({});
 
-  const isOutOfArea = false; 
+  React.useEffect(() => {
+    const getShippingFee = async () => {
+      if (!user || !db) {
+        setShippingLoading(false);
+        return;
+      }
+
+      setShippingLoading(true);
+      try {
+        // 1. Fetch pricing settings (for shop address and default fee)
+        const settingsDoc = await getDoc(doc(db, 'settings', 'pricing'));
+        const settingsData = settingsDoc.data() as any; // PricingSettings equivalent
+        setSettings(settingsData);
+        const shopAddress = settingsData?.shopAddress;
+        const defaultFee = settingsData?.deliveryFee || 50;
+
+        // 2. Fetch user's address
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data() as UserData;
+        const userAddress = userData?.address;
+
+        if (!shopAddress || !userAddress) {
+          setShippingFee(defaultFee); // Use default if addresses are not set
+          setShippingLoading(false);
+          return;
+        }
+
+        // 3. Fetch delivery tiers
+        const tiersCollection = collection(db, 'deliveryTiers');
+        const tiersSnapshot = await getDocs(tiersCollection);
+        const deliveryTiers = tiersSnapshot.docs
+          .map(d => d.data() as { distance: number; price: number })
+          .sort((a, b) => a.distance - b.distance);
+
+        // 4. Calculate distance (using mock function)
+        const distanceInKm = await calculateDistance(shopAddress, userAddress);
+
+        // 5. Find the correct tier
+        let calculatedFee = defaultFee;
+        const matchingTier = deliveryTiers.find(tier => distanceInKm <= tier.distance);
+
+        if (matchingTier) {
+          calculatedFee = matchingTier.price;
+        } 
+
+        setShippingFee(calculatedFee);
+
+      } catch (error) {
+        console.error("Error calculating shipping fee:", error);
+        toast({ title: "Error", description: "Could not calculate shipping fee.", variant: "destructive" });
+        setShippingFee(50); // Fallback fee
+      } finally {
+        setShippingLoading(false);
+      }
+    };
+
+    getShippingFee();
+  }, [user, totalCost, toast]);
 
   const handleApplyCoupon = () => {
     if (coupon.toUpperCase() === 'SAVE10') {
@@ -62,8 +129,7 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
     }
   };
   
-  const shippingFee = isOutOfArea ? OUT_OF_AREA_FEE : 0;
-  const finalTotal = totalCost + (isUrgent ? URGENT_FEE : 0) + shippingFee - discount;
+  const finalTotal = totalCost + (isUrgent ? (settings?.urgentFee || 25) : 0) + shippingFee - discount;
   const isCodEligible = finalTotal >= 100;
 
   React.useEffect(() => {
@@ -104,6 +170,7 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
         createdAt: serverTimestamp(),
         paymentMethod: paymentMethod as 'online' | 'cod',
         isUrgent,
+        shippingFee: shippingFee, // Add shipping fee to order data
         paymentDetails: {
             ...razorpayData,
             status: razorpayData.razorpay_payment_id ? 'Paid' : 'Pending'
@@ -113,6 +180,35 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
     const orderRef = await addDoc(collection(db, 'orders'), orderData);
     return orderRef.id;
   }
+
+  const uploadFiles = async (orderId: string) => {
+    const allPrintFiles = [...files, ...groups.flatMap(g => g.files)];
+    if (allPrintFiles.length === 0) return;
+
+    const formData = new FormData();
+    allPrintFiles.forEach((printFile) => {
+      formData.append('files', printFile.file);
+    });
+
+    try {
+      const response = await fetch(`/api/orders/${orderId}/files`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload files');
+      }
+    } catch (error: any) {
+      console.error('Error uploading files:', error);
+      toast({
+        title: 'File Upload Failed',
+        description: 'Your order was created, but we failed to upload your files. Please contact support.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handlePlaceOrder = async () => {
       if (!user) {
@@ -130,7 +226,10 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
       
       if (paymentMethod === 'cod') {
         try {
-          await saveOrderToDb();
+          const orderId = await saveOrderToDb();
+          if (orderId) {
+            await uploadFiles(orderId);
+          }
           toast({
               title: "Order Placed Successfully!",
               description: "You can track your order in your dashboard.",
@@ -172,11 +271,15 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
             image: "/icon.png", // Add your logo here
             order_id: order.id,
             handler: async function (response: any){
-                await saveOrderToDb({
+                const orderId = await saveOrderToDb({
                     razorpay_payment_id: response.razorpay_payment_id,
                     razorpay_order_id: response.razorpay_order_id,
                     razorpay_signature: response.razorpay_signature
                 });
+
+                if (orderId) {
+                  await uploadFiles(orderId);
+                }
 
                 toast({
                     title: "Payment Successful & Order Placed!",
@@ -245,12 +348,16 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
                         Urgent Delivery
                     </Label>
                 </div>
-                <span className="font-medium flex items-center"><IndianRupee className="h-4 w-4"/>{URGENT_FEE.toFixed(2)}</span>
+                <span className="font-medium flex items-center"><IndianRupee className="h-4 w-4"/>{(settings?.urgentFee || 25).toFixed(2)}</span>
             </div>
 
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Shipping Fee</span>
-              <span className="font-medium flex items-center"><IndianRupee className="h-4 w-4"/>{shippingFee.toFixed(2)}</span>
+              {shippingLoading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <span className="font-medium flex items-center"><IndianRupee className="h-4 w-4"/>{shippingFee.toFixed(2)}</span>
+              )}
             </div>
         </div>
         
@@ -293,7 +400,7 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
           <span>Total</span>
           <span className='flex items-center'><IndianRupee className="h-5 w-5"/>{finalTotal.toFixed(2)}</span>
         </div>
-        <Button size="lg" className="w-full" onClick={handlePlaceOrder} disabled={isPlacingOrder || userLoading}>
+        <Button size="lg" className="w-full" onClick={handlePlaceOrder} disabled={isPlacingOrder || userLoading || shippingLoading}>
           {isPlacingOrder ? <Loader className="animate-spin" /> : getButtonText()}
         </Button>
       </CardContent>

@@ -1,8 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { AdminProtectedRoute } from '@/components/auth/admin-protected-route';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -20,22 +17,9 @@ import {
   Shield
 } from 'lucide-react';
 import Link from 'next/link';
+import { SystemDiagnostics } from '@/components/shared/system-diagnostics';
 
 function AdminHomePage() {
-  const router = useRouter();
-
-  // Auto-redirect to dashboard after a short delay (optional)
-  // Uncomment the following lines if you want automatic redirect
-  /*
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      router.push('/admin/dashboard');
-    }, 2000);
-    
-    return () => clearTimeout(timer);
-  }, [router]);
-  */
-
   const adminSections = [
     {
       title: 'Dashboard',
@@ -134,6 +118,9 @@ function AdminHomePage() {
           </Button>
         </div>
       </div>
+
+      {/* System Diagnostics */}
+      <SystemDiagnostics />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -256,9 +243,5 @@ function AdminHomePage() {
 }
 
 export default function AdminPage() {
-  return (
-    <AdminProtectedRoute>
-      <AdminHomePage />
-    </AdminProtectedRoute>
-  );
+  return <AdminHomePage />;
 }

@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
   // Check if the request is for admin-protected routes
-  const adminProtectedPaths = ['/config', '/install'];
+  const adminProtectedPaths = ['/admin', '/config', '/install'];
   const pathname = request.nextUrl.pathname;
   
   if (adminProtectedPaths.some(path => pathname.startsWith(path))) {
@@ -18,6 +18,7 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    '/admin/:path*',
     '/config/:path*',
     '/install/:path*'
   ]
