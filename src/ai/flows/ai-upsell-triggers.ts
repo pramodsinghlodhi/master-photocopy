@@ -7,7 +7,7 @@
  * - AiUpsellTriggersOutput - The return type for the getUpsellTriggers function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, isAiEnabled} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AiUpsellTriggersInputSchema = z.object({
@@ -27,10 +27,30 @@ const AiUpsellTriggersOutputSchema = z.object({
 export type AiUpsellTriggersOutput = z.infer<typeof AiUpsellTriggersOutputSchema>;
 
 export async function getUpsellTriggers(input: AiUpsellTriggersInput): Promise<AiUpsellTriggersOutput> {
+  // If AI is not enabled, return default upsell offers
+  if (!isAiEnabled || !ai || !aiUpsellTriggersFlow) {
+    return {
+      upsellOffers: [
+        {
+          offerType: 'Premium Binding',
+          description: 'Upgrade to spiral binding for better presentation and durability.'
+        },
+        {
+          offerType: 'Color Printing',
+          description: 'Add color printing to make your document stand out.'
+        },
+        {
+          offerType: 'Express Delivery',
+          description: 'Get your prints delivered within 2 hours for urgent needs.'
+        }
+      ]
+    };
+  }
+  
   return aiUpsellTriggersFlow(input);
 }
 
-const prompt = ai.definePrompt({
+const prompt = ai?.definePrompt({
   name: 'aiUpsellTriggersPrompt',
   input: {schema: AiUpsellTriggersInputSchema},
   output: {schema: AiUpsellTriggersOutputSchema},
@@ -47,14 +67,14 @@ const prompt = ai.definePrompt({
   {{json upsellOffers}}`,
 });
 
-const aiUpsellTriggersFlow = ai.defineFlow(
+const aiUpsellTriggersFlow = ai?.defineFlow(
   {
     name: 'aiUpsellTriggersFlow',
     inputSchema: AiUpsellTriggersInputSchema,
     outputSchema: AiUpsellTriggersOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt!(input);
     return output!;
   }
 );

@@ -9,8 +9,8 @@ import { Input } from '@/components/ui/input';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth, isFirebaseConfigured } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Invalid email address.' }),
@@ -21,6 +21,9 @@ export function LoginForm() {
     const router = useRouter();
     const pathname = usePathname();
     const { toast } = useToast();
+    const { login } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+    
     const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -30,23 +33,43 @@ export function LoginForm() {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!isFirebaseConfigured || !auth) {
-        toast({ title: "Firebase not configured", description: "Please configure Firebase in your .env file", variant: "destructive" });
-        return;
-    }
+    setIsLoading(true);
+    
     try {
-        await signInWithEmailAndPassword(auth, values.email, values.password);
-        if (pathname.includes('/admin')) {
-            router.push('/admin/dashboard');
+        const result = await login(values.email, values.password);
+        
+        if (result.success) {
+            toast({
+                title: "Login Successful",
+                description: "Welcome back!",
+            });
+            
+            // Redirect based on the current path or user role
+            const searchParams = new URLSearchParams(window.location.search);
+            const redirectTo = searchParams.get('redirect');
+            
+            if (redirectTo) {
+                router.push(redirectTo);
+            } else if (pathname.includes('/admin')) {
+                router.push('/admin/dashboard');
+            } else {
+                router.push('/dashboard');
+            }
         } else {
-            router.push('/dashboard');
+            toast({
+                title: "Login Failed",
+                description: result.error || "Invalid credentials",
+                variant: "destructive",
+            });
         }
-    } catch(error: any) {
+    } catch (error: any) {
         toast({
             title: "Login Failed",
-            description: error.message,
+            description: "An unexpected error occurred",
             variant: "destructive",
-        })
+        });
+    } finally {
+        setIsLoading(false);
     }
   }
 
@@ -60,7 +83,11 @@ export function LoginForm() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="name@example.com" {...field} />
+                <Input 
+                  placeholder="name@example.com" 
+                  {...field} 
+                  disabled={isLoading}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -80,14 +107,19 @@ export function LoginForm() {
                     )}
                 </div>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <Input 
+                  type="password" 
+                  placeholder="••••••••" 
+                  {...field} 
+                  disabled={isLoading}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          Login
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? 'Logging in...' : 'Login'}
         </Button>
       </form>
     </Form>

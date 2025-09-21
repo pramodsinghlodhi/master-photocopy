@@ -203,15 +203,8 @@ main() {
 
     echo ""
 
-    # Step 7: Database Seeding
-    print_step "Step 7: Database Setup..."
-    
-    read -p "Do you want to seed the database with sample data? (y/N): " SEED_DB
-    if [[ $SEED_DB =~ ^[Yy]$ ]]; then
-        print_info "Seeding database..."
-        npm run seed
-        print_status "Database seeded with sample data"
-    fi
+    # Step 7: Database Setup Complete
+    print_step "Step 7: Database Setup Complete..."
 
     echo ""
 
@@ -231,7 +224,6 @@ main() {
     echo "  npm run dev          - Start development server (port 9002)"
     echo "  npm run emulators    - Start Firebase emulators"
     echo "  npm run build        - Build for production"
-    echo "  npm run seed         - Seed database with sample data"
     echo "  firebase deploy      - Deploy to production"
     echo ""
     print_info "📞 IMMEDIATE ACCESS"

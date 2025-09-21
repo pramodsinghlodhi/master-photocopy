@@ -305,14 +305,7 @@ WHATSAPP_PHONE_NUMBER_ID=your_phone_number_id
 
 ### 4. Database Setup
 
-Seed the database with sample data:
-```bash
-# Compile TypeScript
-npx tsc scripts/seed-database.ts --outDir scripts/dist --module commonjs --target es2020 --lib es2020 --moduleResolution node
-
-# Run seeding script
-node scripts/dist/seed-database.js
-```
+Your database will be ready to use after running the setup scripts. No additional seeding is required.
 
 ### 5. Development
 

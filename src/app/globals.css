@@ -82,3 +82,53 @@
     @apply bg-background text-foreground font-body;
   }
 }
+
+/* SweetAlert2 Custom Styles */
+.swal2-popup-custom {
+  @apply rounded-lg border border-border shadow-lg;
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.swal2-popup-custom .swal2-title {
+  color: hsl(var(--foreground)) !important;
+  font-weight: 600;
+}
+
+.swal2-popup-custom .swal2-content {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.swal2-confirm-btn {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  @apply h-10 px-4 py-2 mr-2;
+  border: none !important;
+}
+
+.swal2-cancel-btn {
+  @apply inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+  @apply h-10 px-4 py-2;
+  color: hsl(var(--foreground)) !important;
+}
+
+.swal2-popup-custom .swal2-icon {
+  border: none !important;
+}
+
+.swal2-popup-custom .swal2-icon.swal2-warning {
+  color: hsl(var(--destructive)) !important;
+}
+
+.swal2-popup-custom .swal2-icon.swal2-error {
+  color: hsl(var(--destructive)) !important;
+}
+
+.swal2-popup-custom .swal2-icon.swal2-success {
+  color: hsl(var(--primary)) !important;
+}
+
+.swal2-popup-custom .swal2-icon.swal2-info {
+  color: hsl(var(--primary)) !important;
+}

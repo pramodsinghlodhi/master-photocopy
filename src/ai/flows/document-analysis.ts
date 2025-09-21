@@ -8,7 +8,7 @@
  * - AnalyzeDocumentOutput - The return type for the analyzeDocument function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, isAiEnabled} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const AnalyzeDocumentInputSchema = z.object({
@@ -28,10 +28,19 @@ const AnalyzeDocumentOutputSchema = z.object({
 export type AnalyzeDocumentOutput = z.infer<typeof AnalyzeDocumentOutputSchema>;
 
 export async function analyzeDocument(input: AnalyzeDocumentInput): Promise<AnalyzeDocumentOutput> {
+  // If AI is not enabled, return default analysis
+  if (!isAiEnabled || !ai || !analyzeDocumentFlow) {
+    return {
+      documentType: 'Document',
+      formattingScore: 75,
+      improvementSuggestions: 'AI analysis not available. Please ensure document formatting is clean and professional.'
+    };
+  }
+  
   return analyzeDocumentFlow(input);
 }
 
-const prompt = ai.definePrompt({
+const prompt = ai?.definePrompt({
   name: 'analyzeDocumentPrompt',
   input: {schema: AnalyzeDocumentInputSchema},
   output: {schema: AnalyzeDocumentOutputSchema},
@@ -62,14 +71,14 @@ Provide the document type, a formatting score (0-100), and suggestions for impro
   },
 });
 
-const analyzeDocumentFlow = ai.defineFlow(
+const analyzeDocumentFlow = ai?.defineFlow(
   {
     name: 'analyzeDocumentFlow',
     inputSchema: AnalyzeDocumentInputSchema,
     outputSchema: AnalyzeDocumentOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt!(input);
     return output!;
   }
 );

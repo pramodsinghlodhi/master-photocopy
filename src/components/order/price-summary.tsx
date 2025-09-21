@@ -14,7 +14,7 @@ import { Badge } from '../ui/badge';
 import { Checkbox } from '../ui/checkbox';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
-import { doc, getDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, addDoc, collection, serverTimestamp, getDocs, QueryDocumentSnapshot } from 'firebase/firestore';
 import type { OrderItem, PrintFile, FileGroup, UserData, Order } from '@/lib/types';
 import { useRouter } from 'next/navigation';
 
@@ -32,6 +32,7 @@ async function calculateDistance(origin: string, destination: string): Promise<n
   console.log(`Mock distance: ${mockDistance.toFixed(2)} km`);
   return Promise.resolve(mockDistance);
 }
+
 
 
 declare global {
@@ -84,15 +85,15 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
         const tiersCollection = collection(db, 'deliveryTiers');
         const tiersSnapshot = await getDocs(tiersCollection);
         const deliveryTiers = tiersSnapshot.docs
-          .map(d => d.data() as { distance: number; price: number })
-          .sort((a, b) => a.distance - b.distance);
+          .map((d: QueryDocumentSnapshot) => d.data() as { distance: number; price: number })
+          .sort((a: { distance: number; price: number }, b: { distance: number; price: number }) => a.distance - b.distance);
 
         // 4. Calculate distance (using mock function)
         const distanceInKm = await calculateDistance(shopAddress, userAddress);
 
         // 5. Find the correct tier
         let calculatedFee = defaultFee;
-        const matchingTier = deliveryTiers.find(tier => distanceInKm <= tier.distance);
+        const matchingTier = deliveryTiers.find((tier: {distance: number}) => distanceInKm <= tier.distance);
 
         if (matchingTier) {
           calculatedFee = matchingTier.price;
@@ -152,14 +153,17 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
 
     const userDocRef = doc(db, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
-    const userData = userDoc.exists() ? userDoc.data() as UserData : null;
+    const userData = userDoc.exists() ? userDoc.data() as UserData : {} as UserData;
+
+    const [firstName, lastName] = (user.displayName || 'N/A').split(' ');
 
     const orderData: Omit<Order, 'id'> = {
         userId: user.uid,
         customer: {
-          name: user.displayName || 'N/A',
+          first_name: firstName,
+          last_name: lastName,
           email: user.email || 'N/A',
-          phone: userData?.phone || 'N/A',
+          phone_number: userData?.phone || 'N/A',
           address: userData?.address || 'N/A',
         },
         items: orderItems,
@@ -174,7 +178,11 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
         paymentDetails: {
             ...razorpayData,
             status: razorpayData.razorpay_payment_id ? 'Paid' : 'Pending'
-        }
+        },
+        totals: { subtotal: totalCost, shipping: shippingFee, tax: 0, total: finalTotal },
+        delivery: { type: 'own' },
+        timeline: [{ action: 'Order Placed', actor: 'customer', ts: serverTimestamp() }],
+        orderId: '',
     };
     
     const orderRef = await addDoc(collection(db, 'orders'), orderData);
@@ -260,7 +268,7 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
         
         const userDocRef = doc(db!, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
-        const userData = userDoc.exists() ? userDoc.data() as UserData : {};
+        const userData = userDoc.exists() ? userDoc.data() as UserData : {} as UserData;
 
         const options = {
             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -290,7 +298,7 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
             prefill: {
                 name: user.displayName,
                 email: user.email,
-                contact: userData.phone
+                contact: userData?.phone
             },
             notes: {
                 userId: user.uid

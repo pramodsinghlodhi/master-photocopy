@@ -35,10 +35,13 @@ function getStatusVariant(status: Order['status']) {
         return 'default';
       case 'Processing':
       case 'Shipped':
-      case 'Booked':
+      case 'Out for Delivery':
         return 'secondary';
       case 'Cancelled':
+      case 'Not Delivered':
+      case 'Returned':
         return 'destructive';
+      case 'Pending':
       default:
         return 'outline';
     }
@@ -48,21 +51,67 @@ function AuthOrderHistory() {
   const [user, authLoading] = useAuthState(auth!);
   const { toast } = useToast();
 
-  const ordersRef = user ? query(collection(db!, 'orders'), where('userId', '==', user.uid), orderBy('createdAt', 'desc')) : null;
-  const [value, loading, error] = useCollection(ordersRef);
+  // Create the query only when both user and db are available
+  const ordersRef = React.useMemo(() => {
+    if (!user || !db) {
+      return null;
+    }
+    try {
+      return query(
+        collection(db, 'orders'), 
+        where('userId', '==', user.uid), 
+        orderBy('createdAt', 'desc')
+      );
+    } catch (error) {
+      console.error('Error creating Firestore query:', error);
+      // If the composite index is still building, try a simpler query without orderBy
+      try {
+        console.log('Fallback: Using simple query without orderBy while index builds...');
+        return query(
+          collection(db, 'orders'), 
+          where('userId', '==', user.uid)
+        );
+      } catch (fallbackError) {
+        console.error('Fallback query also failed:', fallbackError);
+        toast({
+          title: 'Database Error',
+          description: 'Failed to initialize order query. Please refresh the page.',
+          variant: 'destructive'
+        });
+        return null;
+      }
+    }
+  }, [user, db, toast]);
 
-  const orders: Order[] = value ? value.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order)) : [];
+  const [value, loading, error] = useCollection(ordersRef, {
+    snapshotListenOptions: { includeMetadataChanges: false }
+  });
+
+  const orders: Order[] = React.useMemo(() => {
+    if (!value) return [];
+    
+    const ordersList = value.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+    
+    // Sort by createdAt descending (newest first) in case the query didn't include orderBy
+    return ordersList.sort((a, b) => {
+      const aTime = a.createdAt?.toDate?.() || new Date(a.date);
+      const bTime = b.createdAt?.toDate?.() || new Date(b.date);
+      return bTime.getTime() - aTime.getTime();
+    });
+  }, [value]);
 
   const handleDownloadInvoice = async (order: Order) => {
     try {
         const pdfBytes = await generateInvoicePdf(order);
-        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        // Create blob from Uint8Array
+        const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
         link.download = `Invoice-${order.id}.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
     } catch(err) {
         console.error("Failed to generate invoice", err);
         toast({ title: 'Error generating invoice', description: 'Could not generate the PDF invoice. Please try again.', variant: 'destructive' });
@@ -104,8 +153,15 @@ function AuthOrderHistory() {
             )}
             {!isLoading && error && (
                  <TableRow>
-                    <TableCell colSpan={6} className="text-center text-destructive py-8">
-                        Error loading orders: {error.message}
+                    <TableCell colSpan={6} className="text-center py-8">
+                        <div className="space-y-2">
+                          <p className="text-destructive">Error loading orders: {error.message}</p>
+                          {error.message.includes('requires an index') && (
+                            <p className="text-sm text-muted-foreground">
+                              Database index is being built. This may take a few minutes. Please try refreshing the page in a moment.
+                            </p>
+                          )}
+                        </div>
                     </TableCell>
                 </TableRow>
             )}

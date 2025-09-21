@@ -39,9 +39,10 @@ import {
   Trash2
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { seedAgentData } from '@/lib/sample-data';
+import { useConfirmationAlert } from '@/hooks/use-confirmation-alert';
 
 export default function DeliveryManagementPage() {
+  const { showConfirmation, showSuccessAlert, showErrorAlert } = useConfirmationAlert();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [filteredAgents, setFilteredAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -392,7 +393,15 @@ export default function DeliveryManagementPage() {
     try {
       if (!db) return;
 
-      if (!confirm(`Are you sure you want to delete agent ${agentName}? This action cannot be undone.`)) {
+      const confirmed = await showConfirmation({
+        title: 'Delete Agent',
+        message: `Are you sure you want to delete agent ${agentName}? This action cannot be undone.`,
+        confirmText: 'Yes, delete',
+        cancelText: 'Cancel',
+        type: 'warning'
+      });
+
+      if (!confirmed) {
         return;
       }
 
@@ -406,16 +415,15 @@ export default function DeliveryManagementPage() {
         updatedAt: new Date()
       });
 
-      toast({
+      showSuccessAlert({
         title: "Agent Deleted",
         description: `Agent ${agentName} has been deleted successfully.`
       });
     } catch (error) {
       console.error('Error deleting agent:', error);
-      toast({
+      showErrorAlert({
         title: "Error",
-        description: "Failed to delete agent.",
-        variant: "destructive"
+        description: "Failed to delete agent."
       });
     }
   };
@@ -452,23 +460,6 @@ export default function DeliveryManagementPage() {
       case 'pending': return <Clock className="h-4 w-4" />;
       case 'suspended': return <UserX className="h-4 w-4" />;
       default: return <Users className="h-4 w-4" />;
-    }
-  };
-
-  const handleSeedData = async () => {
-    try {
-      await seedAgentData();
-      toast({
-        title: "Sample Data Added",
-        description: "Sample agent data has been added to the database."
-      });
-    } catch (error) {
-      console.error('Error seeding data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add sample data.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -581,10 +572,6 @@ export default function DeliveryManagementPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-
-          <Button onClick={handleSeedData} variant="outline">
-            Add Sample Data
-          </Button>
         </div>
       </div>
 
@@ -830,11 +817,6 @@ export default function DeliveryManagementPage() {
                   : "Agents will appear here once they register"
                 }
               </p>
-              {!searchTerm && (
-                <Button onClick={handleSeedData} variant="outline">
-                  Add Sample Agents
-                </Button>
-              )}
             </div>
           )}
         </CardContent>

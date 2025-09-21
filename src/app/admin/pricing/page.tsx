@@ -30,11 +30,18 @@ interface PricingSettings {
   
   // Additional charges
   urgentFee: number;
-  deliveryFee: number;
+  deliveryFee: number; // Default fee
   codMin: number;
   codFee: number;
   giftCouponMin: number;
   giftCouponMax: number;
+  shopAddress: string;
+}
+
+interface DeliveryTier {
+  id: string;
+  distance: number; // in km
+  price: number;
 }
 
 interface PrintPreset {
@@ -62,6 +69,7 @@ const defaultSettings: PricingSettings = {
   codFee: 10,
   giftCouponMin: 10,
   giftCouponMax: 500,
+  shopAddress: '' // New field for shop address
 };
 
 export default function PricingPage() {
@@ -69,6 +77,11 @@ export default function PricingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
+  // Delivery tiers state
+  const [deliveryTiers, setDeliveryTiers] = useState<DeliveryTier[]>([]);
+  const [tiersLoading, setTiersLoading] = useState(true);
+  const [tierForm, setTierForm] = useState({ distance: '', price: '' });
+
   // Preset management states
   const [presets, setPresets] = useState<PrintPreset[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(true);
@@ -113,10 +126,68 @@ export default function PricingPage() {
     loadSettings();
   }, []);
 
-  // Load presets on component mount
+  // Load presets and delivery tiers on component mount
   useEffect(() => {
     loadPresets();
+    loadDeliveryTiers();
   }, []);
+
+  // Load delivery tiers from Firebase
+  const loadDeliveryTiers = async () => {
+    if (!db) {
+      setTiersLoading(false);
+      return;
+    }
+    setTiersLoading(true);
+    try {
+      const tiersCollection = collection(db, 'deliveryTiers');
+      const tiersSnapshot = await getDocs(tiersCollection);
+      const tiersData = tiersSnapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() } as DeliveryTier))
+        .sort((a, b) => a.distance - b.distance);
+      setDeliveryTiers(tiersData);
+    } catch (error) {
+      console.error('Error loading delivery tiers:', error);
+      toast({ title: "Error", description: "Failed to load delivery tiers", variant: "destructive" });
+    } finally {
+      setTiersLoading(false);
+    }
+  };
+
+  // Add a new delivery tier
+  const addDeliveryTier = async () => {
+    const distance = parseFloat(tierForm.distance);
+    const price = parseFloat(tierForm.price);
+
+    if (!db || isNaN(distance) || isNaN(price) || distance <= 0 || price < 0) {
+      toast({ title: "Error", description: "Please enter valid distance and price", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'deliveryTiers'), { distance, price });
+      toast({ title: "Success", description: "Delivery tier added" });
+      setTierForm({ distance: '', price: '' });
+      loadDeliveryTiers(); // Refresh list
+    } catch (error) {
+      console.error('Error adding delivery tier:', error);
+      toast({ title: "Error", description: "Failed to add delivery tier", variant: "destructive" });
+    }
+  };
+
+  // Delete a delivery tier
+  const deleteDeliveryTier = async (tierId: string) => {
+    if (!db) return;
+
+    try {
+      await deleteDoc(doc(db, 'deliveryTiers', tierId));
+      toast({ title: "Success", description: "Delivery tier deleted" });
+      loadDeliveryTiers(); // Refresh list
+    } catch (error) {
+      console.error('Error deleting delivery tier:', error);
+      toast({ title: "Error", description: "Failed to delete delivery tier", variant: "destructive" });
+    }
+  };
 
   // Load presets from Firebase
   const loadPresets = async () => {
@@ -262,7 +333,7 @@ export default function PricingPage() {
   };
 
   // Update a specific setting
-  const updateSetting = (key: keyof PricingSettings, value: number) => {
+  const updateSetting = (key: keyof PricingSettings, value: any) => {
     setSettings(prev => ({
       ...prev,
       [key]: value
@@ -283,7 +354,7 @@ export default function PricingPage() {
     setSaving(true);
     try {
       const docRef = doc(db, 'settings', 'pricing');
-      await setDoc(docRef, settings);
+      await setDoc(docRef, settings, { merge: true });
       
       toast({
         title: "Success",
@@ -471,19 +542,19 @@ export default function PricingPage() {
                         </div>
                     </div>
                      <div className="space-y-2">
-                        <Label htmlFor="delivery-fee">Out-of-Area Delivery Fee</Label>
-                         <div className="relative">
-                             <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                              id="delivery-fee" 
-                              type="number" 
-                              value={settings.deliveryFee} 
-                              onChange={(e) => updateSetting('deliveryFee', Number(e.target.value))}
-                              className="pl-8"
-                            />
-                        </div>
-                        <p className="text-xs text-muted-foreground">Applies to orders outside Gwalior, MP.</p>
-                    </div>
+    <Label htmlFor="delivery-fee">Own Delivery Fee</Label>
+    <div className="relative">
+        <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+            id="delivery-fee"
+            type="number"
+            value={settings.deliveryFee}
+            onChange={(e) => updateSetting('deliveryFee', Number(e.target.value))}
+            className="pl-8"
+        />
+    </div>
+    <p className="text-xs text-muted-foreground">Default delivery fee. Will be overridden by dynamic pricing if applicable.</p>
+</div>
                      <div className="space-y-2">
                         <Label htmlFor="cod-min">Cash on Delivery Min. ₹</Label>
                          <div className="relative">
@@ -542,6 +613,92 @@ export default function PricingPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Shop Location</CardTitle>
+                    <CardDescription>Set your business address for distance calculations.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Label htmlFor="shop-address">Shop Address</Label>
+                    <Textarea
+                        id="shop-address"
+                        placeholder="Enter your full shop address"
+                        value={settings.shopAddress}
+                        onChange={(e) => updateSetting('shopAddress', e.target.value)}
+                        rows={3}
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">This address will be used as the starting point for calculating delivery distances.</p>
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Dynamic Delivery Pricing</CardTitle>
+                    <CardDescription>Set delivery fees based on distance for your own delivery service.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex gap-4 mb-4">
+                        <div className="flex-1 space-y-2">
+                            <Label htmlFor="tier-distance">Max Distance (km)</Label>
+                            <Input 
+                                id="tier-distance" 
+                                type="number" 
+                                placeholder="e.g., 10"
+                                value={tierForm.distance}
+                                onChange={(e) => setTierForm({...tierForm, distance: e.target.value})}
+                            />
+                        </div>
+                        <div className="flex-1 space-y-2">
+                            <Label htmlFor="tier-price">Price</Label>
+                            <div className="relative">
+                                <IndianRupee className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    id="tier-price" 
+                                    type="number" 
+                                    placeholder="e.g., 25"
+                                    value={tierForm.price}
+                                    onChange={(e) => setTierForm({...tierForm, price: e.target.value})}
+                                    className="pl-8"
+                                />
+                            </div>
+                        </div>
+                        <div className="self-end">
+                            <Button onClick={addDeliveryTier}><PlusCircle className="mr-2 h-4 w-4"/> Add Tier</Button>
+                        </div>
+                    </div>
+                    <Separator />
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Max Distance (km)</TableHead>
+                                <TableHead>Price</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {tiersLoading ? (
+                                <TableRow><TableCell colSpan={3} className="text-center">Loading...</TableCell></TableRow>
+                            ) : deliveryTiers.length === 0 ? (
+                                <TableRow><TableCell colSpan={3} className="text-center">No delivery tiers set.</TableCell></TableRow>
+                            ) : (
+                                deliveryTiers.map(tier => (
+                                    <TableRow key={tier.id}>
+                                        <TableCell>{tier.distance} km</TableCell>
+                                        <TableCell>₹{tier.price}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => deleteDeliveryTier(tier.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+
         </div>
 
         {/* Column 2: Presets */}

@@ -1,0 +1,10 @@
+This is a test document for checking the order upload functionality.
+
+This document should be processed without AI analysis errors.
+
+Test Content:
+- Simple text formatting
+- No special characters that would cause issues
+- Just a basic PDF for testing upload functionality
+
+End of test document.

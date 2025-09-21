@@ -1,0 +1,21 @@
+[
+  {
+    "id": "admin-1757737561321",
+    "email": "admin@company.com",
+    "name": "System Administrator",
+    "role": "admin",
+    "passwordHash": "$2b$12$QGxnhG4Pi3Y4yquhdyt7lerXkjT9a20UW6wHlAMeKlf.RkMCYoXRi",
+    "createdAt": "2025-09-13T04:26:01.321Z",
+    "updatedAt": "2025-09-13T04:26:01.321Z",
+    "permissions": [
+      "users.read",
+      "users.write",
+      "orders.read",
+      "orders.write",
+      "settings.read",
+      "settings.write",
+      "dashboard.access",
+      "analytics.read"
+    ]
+  }
+]

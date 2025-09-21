@@ -32,9 +32,10 @@ export async function generateInvoicePdf(order: Order): Promise<Uint8Array> {
   
   // Customer Info
   drawText('Bill To:', 50, yPos - 45, { font: boldFont });
-  drawText(order.customer.name, 50, yPos - 60);
+  const customerName = `${order.customer.first_name} ${order.customer.last_name}`;
+  drawText(customerName, 50, yPos - 60);
   drawText(order.customer.email, 50, yPos - 75);
-  if (order.customer.phone) drawText(order.customer.phone, 50, yPos - 90);
+  if (order.customer.phone_number) drawText(order.customer.phone_number, 50, yPos - 90);
   if (order.customer.address) drawText(order.customer.address, 50, yPos - 105);
 
   // Table Header

@@ -607,7 +607,6 @@ WHATSAPP_VERIFY_TOKEN=your_verify_token_here`;
                     <CardContent className="space-y-2 text-sm">
                       <p>• Start the development server</p>
                       <p>• Run Firebase emulators</p>
-                      <p>• Seed sample data</p>
                       <p>• Test the application</p>
                       <p>• Deploy to production</p>
                     </CardContent>

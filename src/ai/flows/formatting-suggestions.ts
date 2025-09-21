@@ -10,7 +10,7 @@
  * - FormattingSuggestionsOutput - The return type for the getFormattingSuggestions function.
  */
 
-import {ai} from '@/ai/genkit';
+import {ai, isAiEnabled} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const FormattingSuggestionsInputSchema = z.object({
@@ -36,10 +36,22 @@ export type FormattingSuggestionsOutput = z.infer<typeof FormattingSuggestionsOu
 export async function getFormattingSuggestions(
   input: FormattingSuggestionsInput
 ): Promise<FormattingSuggestionsOutput> {
+  // If AI is not enabled, return default suggestions
+  if (!isAiEnabled || !ai || !formattingSuggestionsFlow) {
+    return {
+      suggestions: [
+        'Ensure consistent font sizes and styles throughout the document',
+        'Use proper margins and spacing for better readability',
+        'Check alignment and formatting consistency',
+        'Consider using headers and bullet points for better structure'
+      ]
+    };
+  }
+  
   return formattingSuggestionsFlow(input);
 }
 
-const prompt = ai.definePrompt({
+const prompt = ai?.definePrompt({
   name: 'formattingSuggestionsPrompt',
   input: {schema: FormattingSuggestionsInputSchema},
   output: {schema: FormattingSuggestionsOutputSchema},
@@ -53,14 +65,14 @@ Suggestions:
 `,
 });
 
-const formattingSuggestionsFlow = ai.defineFlow(
+const formattingSuggestionsFlow = ai?.defineFlow(
   {
     name: 'formattingSuggestionsFlow',
     inputSchema: FormattingSuggestionsInputSchema,
     outputSchema: FormattingSuggestionsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const {output} = await prompt!(input);
     return output!;
   }
 );

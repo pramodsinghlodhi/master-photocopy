@@ -5,7 +5,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Agent } from '@/lib/types';
-import { AgentLogin } from '@/components/agent/agent-login';
+import { AgentOTPLogin } from '@/components/agent/agent-otp-login';
 import { AgentOnboarding } from '@/components/agent/agent-onboarding';
 import { AgentDashboard } from '@/components/agent/agent-dashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -184,7 +184,7 @@ export default function AgentPortalPage() {
         
         {/* Main login component */}
         <div className="px-4">
-          <AgentLogin onLoginSuccess={handleLoginSuccess} />
+          <AgentOTPLogin onLoginSuccess={handleLoginSuccess} />
         </div>
       </div>
     );

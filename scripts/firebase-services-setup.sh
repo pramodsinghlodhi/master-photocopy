@@ -117,20 +117,8 @@ async function setupFirestore() {
         
         console.log('✅ Firestore database created successfully');
         
-        // Create initial collections with sample data
-        console.log('Setting up initial collections...');
-        
-        await db.collection('users').doc('sample').set({
-            email: 'sample@example.com',
-            role: 'customer',
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        
-        await db.collection('orders').doc('sample').set({
-            status: 'pending',
-            totalAmount: 100,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        // Set up basic configuration
+        console.log('Setting up basic configuration...');
         
         await db.collection('settings').doc('app').set({
             version: '1.0.0',
@@ -138,7 +126,7 @@ async function setupFirestore() {
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
-        console.log('✅ Initial collections created');
+        console.log('✅ Basic configuration created');
         
     } catch (error) {
         console.log('ℹ️  Firestore may already be set up:', error.message);

@@ -39,6 +39,10 @@ export type OrderItem = {
     price: number;
     quantity?: number;
     sku?: string;
+    groupName?: string;
+    folderName?: string;
+    uploadOrder?: number;
+    fileId?: string;
 }
 
 export type PaymentDetails = {
@@ -98,6 +102,7 @@ export type Order = {
     subtotal: number;
     shipping: number;
     tax: number;
+    discount?: number;
     total: number;
   };
   payment: {
@@ -117,6 +122,9 @@ export type Order = {
   paymentMethod?: 'online' | 'cod'; // For backward compatibility
   isUrgent?: boolean; // For backward compatibility
   paymentDetails?: PaymentDetails; // For backward compatibility
+  groupName?: string; // Group organization
+  folderName?: string; // Folder organization
+  fileCount?: number; // Number of files in order
 };
 
 // Agent Management Types
@@ -281,14 +289,15 @@ export type UserData = {
 
 // Order File Management Types
 export type OrderFile = {
+  id: string;
   name: string;
-  path: string;
+  path?: string;
   url: string;
   size: number;
   type: string;
-  uploadedAt?: Date;
+  uploadedAt?: string | Date;
   order: number;
-  group?: string;
+  groupName?: string;
 };
 
 // Referral System Types

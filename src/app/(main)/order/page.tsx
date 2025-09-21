@@ -114,6 +114,30 @@ export default function OrderPage() {
                 setFiles(prev => prev.map(f => f.id === file.id ? {...f, status: 'analyzing'} : f));
                 
                 try {
+                    // Check if AI is available before attempting analysis
+                    const hasAiKey = !!(process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_API_KEY);
+                    
+                    if (!hasAiKey) {
+                        // Skip AI analysis if no API key is configured
+                        console.log('AI analysis skipped - no API key configured');
+                        setFiles(prev => prev.map(f => f.id === file.id ? {
+                            ...f, 
+                            status: 'ready',
+                            analysis: {
+                                documentType: 'Document',
+                                formattingScore: 75,
+                                improvementSuggestions: 'Document appears ready for printing. AI analysis not available.'
+                            },
+                            suggestions: {
+                                suggestions: ['Ensure document formatting is clean and professional']
+                            },
+                            upsells: {
+                                upsellOffers: []
+                            }
+                        } : f));
+                        continue;
+                    }
+
                     // 2. Convert file to data URI
                     const documentDataUri = await fileToDataUri(file.file);
                     
@@ -145,12 +169,39 @@ export default function OrderPage() {
                     } : f));
 
                 } catch(error) {
-                    console.error("AI Analysis failed for", file.file.name, error);
-                    setFiles(prev => prev.map(f => f.id === file.id ? {
-                        ...f, 
-                        status: 'error', 
-                        error: 'AI analysis failed.'
-                    } : f));
+                    console.warn("AI Analysis not available for", file.file.name, error);
+                    
+                    // Check if error is due to missing API key (configuration issue)
+                    const isConfigError = error instanceof Error && 
+                        (error.message.includes('GEMINI_API_KEY') || 
+                         error.message.includes('GOOGLE_API_KEY') ||
+                         error.message.includes('API key'));
+                    
+                    if (isConfigError) {
+                        // AI not configured - proceed with default analysis
+                        setFiles(prev => prev.map(f => f.id === file.id ? {
+                            ...f, 
+                            status: 'ready',
+                            analysis: {
+                                documentType: 'Document',
+                                formattingScore: 75,
+                                improvementSuggestions: 'AI analysis not available. Document appears to be ready for printing.'
+                            },
+                            suggestions: {
+                                suggestions: ['Ensure document formatting is clean and professional']
+                            },
+                            upsells: {
+                                upsellOffers: []
+                            }
+                        } : f));
+                    } else {
+                        // Actual error occurred
+                        setFiles(prev => prev.map(f => f.id === file.id ? {
+                            ...f, 
+                            status: 'error', 
+                            error: 'AI analysis failed.'
+                        } : f));
+                    }
                 }
             }
         }

@@ -103,6 +103,13 @@ function AdminHomePage() {
         <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
           Welcome to the admin dashboard. Manage your business operations from here.
         </p>
+        <div className="flex justify-center mb-4">
+          <div className="bg-green-100 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-2">
+            <span className="text-green-800 dark:text-green-200 font-semibold">
+              ✅ JWT Authentication System Active
+            </span>
+          </div>
+        </div>
         <div className="flex justify-center gap-4">
           <Button asChild size="lg">
             <Link href="/admin/dashboard">
@@ -111,9 +118,15 @@ function AdminHomePage() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/config">
-              <Settings className="mr-2 h-5 w-5" />
-              System Config
+            <Link href="/admin/setup">
+              <Shield className="mr-2 h-5 w-5" />
+              Admin Setup
+            </Link>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <Link href="/admin/login">
+              <Users className="mr-2 h-5 w-5" />
+              Admin Login
             </Link>
           </Button>
         </div>
@@ -121,6 +134,56 @@ function AdminHomePage() {
 
       {/* System Diagnostics */}
       <SystemDiagnostics />
+
+      {/* Authentication System Status */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Authentication System Status
+          </CardTitle>
+          <CardDescription>
+            JWT-based authentication with secure session management
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+              <span className="font-medium">JWT Authentication</span>
+              <span className="text-green-600 font-semibold">✓ Active</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+              <span className="font-medium">Route Protection</span>
+              <span className="text-green-600 font-semibold">✓ Active</span>
+            </div>
+            <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+              <span className="font-medium">Edge Runtime</span>
+              <span className="text-green-600 font-semibold">✓ Compatible</span>
+            </div>
+          </div>
+          
+          <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded border border-yellow-200 dark:border-yellow-800">
+            <h4 className="font-semibold mb-3">🔐 Demo Admin Credentials</h4>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Email:</span>
+                <code className="block text-sm bg-white dark:bg-gray-800 p-2 rounded mt-1">
+                  admin@masterphotocopy.com
+                </code>
+              </div>
+              <div>
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Password:</span>
+                <code className="block text-sm bg-white dark:bg-gray-800 p-2 rounded mt-1">
+                  admin123456
+                </code>
+              </div>
+            </div>
+            <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-3">
+              <strong>Note:</strong> Use these credentials after running the admin setup to access protected admin areas.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

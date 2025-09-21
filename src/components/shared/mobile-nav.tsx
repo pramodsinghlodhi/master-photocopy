@@ -11,8 +11,15 @@ const navLinks = [
     { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
     { href: "/order", icon: PlusCircle, label: "New Order" },
     { href: "/referrals", icon: Gift, label: "Referrals" },
-    { href: "/wallet", icon: Wallet, label: "Wallet" },
     { href: "/profile", icon: User, label: "Profile" },
+];
+
+const sheetNavLinks = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/order", label: "New Order" },
+    { href: "/referrals", label: "Referrals" },
+    { href: "/wallet", label: "Wallet" },
+    { href: "/profile", label: "Profile" },
 ];
 
 export function MobileNavContent({ isSheet = false } : {isSheet?: boolean}) {
@@ -26,7 +33,7 @@ export function MobileNavContent({ isSheet = false } : {isSheet?: boolean}) {
                   <Printer className="h-6 w-6 text-primary" />
                   <span className="font-bold">Masterphoto Copy</span>
                 </Link>
-                {navLinks.map(link => (
+                {sheetNavLinks.map(link => (
                     <Link
                         key={link.href}
                         href={link.href}

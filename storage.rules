@@ -1,10 +1,19 @@
 rules_version = '2';
 
-// Craft rules based on data in your Firestore database
-// allow write: if firestore.get(
-//    /databases/(default)/documents/users/$(request.auth.uid)).data.isAdmin;
 service firebase.storage {
   match /b/{bucket}/o {
+    // Allow admin access to order files
+    match /orders/{orderId}/{allPaths=**} {
+      allow read, write: if firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Allow authenticated users to read their own order files
+    match /orders/{orderId}/{allPaths=**} {
+      allow read: if request.auth != null 
+        && firestore.get(/databases/(default)/documents/orders/$(orderId)).data.userId == request.auth.uid;
+    }
+    
+    // Fallback: deny everything else
     match /{allPaths=**} {
       allow read, write: if false;
     }

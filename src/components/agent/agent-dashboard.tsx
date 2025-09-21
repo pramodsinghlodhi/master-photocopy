@@ -34,7 +34,6 @@ import {
   BarChart3
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { seedTestAgentOrders, addRandomTestOrders } from '@/lib/sample-data';
 
 interface AgentDashboardProps {
   agent: Agent;
@@ -145,33 +144,6 @@ export function AgentDashboard({ agent, onLogout }: AgentDashboardProps) {
     }
   };
 
-  const handleSeedTestData = async () => {
-    try {
-      if (assignedOrders.length === 0) {
-        // First time - add initial test orders
-        await seedTestAgentOrders();
-        toast({
-          title: "Test Data Added",
-          description: "5 sample orders have been assigned to this agent for testing."
-        });
-      } else {
-        // Add more random orders
-        await addRandomTestOrders(agent?.agentId || 'test-agent-1', 3);
-        toast({
-          title: "More Test Orders Added",
-          description: "3 additional random orders have been assigned to this agent."
-        });
-      }
-    } catch (error) {
-      console.error('Error seeding test data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to add test data.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleMarkDelivered = async () => {
     if (!selectedOrder) return;
 
@@ -262,16 +234,6 @@ export function AgentDashboard({ agent, onLogout }: AgentDashboardProps) {
             </div>
             <div className="flex items-center gap-2">
               <ThemeToggle />
-              {assignedOrders.length === 0 && (
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleSeedTestData}
-                  className="text-blue-600 dark:text-blue-300 border-blue-200 dark:border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900"
-                >
-                  Add Test Orders
-                </Button>
-              )}
               <Button 
                 variant="outline" 
                 size="sm"
@@ -376,14 +338,6 @@ export function AgentDashboard({ agent, onLogout }: AgentDashboardProps) {
             <h2 className="text-lg font-semibold text-gray-900">
               Your Orders ({assignedOrders.length})
             </h2>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSeedTestData}
-              className="text-blue-600 border-blue-200"
-            >
-              {assignedOrders.length === 0 ? 'Add 5 Orders' : 'Add 3 More'}
-            </Button>
           </div>
 
           {assignedOrders.length === 0 ? (
@@ -394,9 +348,6 @@ export function AgentDashboard({ agent, onLogout }: AgentDashboardProps) {
                 <p className="text-gray-500 dark:text-gray-400 mb-4">
                   Orders will appear here when assigned to you
                 </p>
-                <Button onClick={handleSeedTestData} className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800">
-                  Add Test Orders
-                </Button>
               </CardContent>
             </Card>
           ) : (
