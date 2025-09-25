@@ -84,12 +84,37 @@ export async function GET(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Error fetching orders:', error);
+    
+    // Specific error handling for Firebase Admin SDK issues
+    if (error.message && error.message.includes('Firebase Admin SDK not initialized')) {
+      return NextResponse.json(
+        { 
+          error: 'Firebase Admin SDK Configuration Required',
+          details: 'Server-side Firebase access requires either: 1) FIREBASE_SERVICE_ACCOUNT_KEY environment variable with service account JSON, or 2) Google Cloud application default credentials (run: gcloud auth application-default login)',
+          code: 'ADMIN_SDK_NOT_CONFIGURED'
+        },
+        { status: 503 } // Service Unavailable
+      );
+    }
+    
+    if (error.message && (error.message.includes('permission-denied') || error.message.includes('PERMISSION_DENIED'))) {
+      return NextResponse.json(
+        { 
+          error: 'Firebase Permission Denied',
+          details: 'Firebase Admin SDK has insufficient permissions. Please check service account permissions or run: gcloud auth application-default login',
+          code: 'PERMISSION_DENIED'
+        },
+        { status: 403 }
+      );
+    }
+    
     return NextResponse.json(
       { 
-        error: 'Firebase Admin SDK required for server-side access. Please configure service account credentials.',
-        details: error.message 
+        error: 'Failed to fetch orders',
+        details: error.message,
+        code: 'UNKNOWN_ERROR'
       },
-      { status: 403 }
+      { status: 500 }
     );
   }
 }

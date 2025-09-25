@@ -5,6 +5,33 @@ import { getUserFromFirebaseToken, getFirebaseTokenFromRequest, isAdmin } from '
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   
+  // Block access to sensitive files and directories
+  const sensitivePatterns = [
+    '/.git',
+    '/.env',
+    '/node_modules',
+    '/.next',
+    '/package.json',
+    '/package-lock.json',
+    '/yarn.lock',
+    '/tsconfig.json',
+    '/next.config',
+    '/firebase.json',
+    '/firestore.rules',
+    '/storage.rules',
+    '/.gitignore',
+    '/README.md',
+    '/CHANGELOG.md',
+    '/LICENSE'
+  ];
+  
+  // Check if the request is for a sensitive file/directory
+  for (const pattern of sensitivePatterns) {
+    if (pathname.startsWith(pattern)) {
+      return new NextResponse('Not Found', { status: 404 });
+    }
+  }
+  
   // Define unprotected admin routes (setup and login)
   const adminUnprotectedPaths = ['/admin/setup', '/admin/login'];
   

@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+
+# Allow access to main pages
+Allow: /
+Allow: /services
+Allow: /pricing
+Allow: /about
+Allow: /contact
+Allow: /legal/*
+
+# Disallow admin and sensitive areas
+Disallow: /admin
+Disallow: /agent
+Disallow: /api/
+Disallow: /.git/
+Disallow: /config/
+Disallow: /install/
+Disallow: /debug/
+Disallow: /_next/
+Disallow: /private/
+Disallow: /internal/
+
+# Sitemap
+Sitemap: https://app.masterphotocopy.com/sitemap.xml

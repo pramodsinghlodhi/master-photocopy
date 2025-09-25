@@ -105,7 +105,18 @@ export function useOrders(): UseOrdersReturn {
       setPagination(result.data.pagination);
 
     } catch (err: any) {
-      setError(err.message);
+      // Enhanced error handling for Firebase configuration issues
+      let errorMessage = err.message;
+      
+      if (err.message && err.message.includes('Firebase Admin SDK Configuration Required')) {
+        errorMessage = 'Firebase configuration required: Please set up Firebase Admin SDK credentials.';
+      } else if (err.message && err.message.includes('permission-denied')) {
+        errorMessage = 'Firebase permission error: Missing or insufficient permissions.';
+      } else if (err.message && err.message.includes('ADMIN_SDK_NOT_CONFIGURED')) {
+        errorMessage = 'Server configuration required: Firebase Admin SDK not properly configured.';
+      }
+      
+      setError(errorMessage);
       console.error('Error fetching orders:', err);
     } finally {
       setLoading(false);

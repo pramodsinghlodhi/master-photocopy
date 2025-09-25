@@ -40,7 +40,7 @@ export function getFirebaseAdminDB() {
   try {
     const app = getFirebaseAdminApp();
     if (!app) {
-      throw new Error('Firebase Admin SDK not initialized');
+      throw new Error('Firebase Admin SDK not initialized - Missing service account credentials. Please configure FIREBASE_SERVICE_ACCOUNT_KEY environment variable or run: gcloud auth application-default login');
     }
     
     const db = admin.firestore(app);
