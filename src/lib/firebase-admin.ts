@@ -16,13 +16,13 @@ export function getFirebaseAdminApp() {
       firebaseAdminApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`,
+        storageBucket: `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`,
       });
     } else if (process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
       // Use default credentials (development - requires gcloud auth)
       firebaseAdminApp = admin.initializeApp({
         projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        storageBucket: `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.appspot.com`,
+        storageBucket: `${process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID}.firebasestorage.app`,
       });
     } else {
       throw new Error('Firebase project ID not configured');
@@ -37,11 +37,19 @@ export function getFirebaseAdminApp() {
 }
 
 export function getFirebaseAdminDB() {
-  const app = getFirebaseAdminApp();
-  if (!app) {
-    throw new Error('Firebase Admin SDK not initialized');
+  try {
+    const app = getFirebaseAdminApp();
+    if (!app) {
+      throw new Error('Firebase Admin SDK not initialized');
+    }
+    
+    const db = admin.firestore(app);
+    console.log('Firebase Admin Firestore instance obtained');
+    return db;
+  } catch (error) {
+    console.error('Error getting Firebase Admin DB:', error);
+    throw error;
   }
-  return admin.firestore(app);
 }
 
 export function getFirebaseAdminStorage() {

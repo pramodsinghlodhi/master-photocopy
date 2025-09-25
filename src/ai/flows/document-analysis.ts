@@ -8,8 +8,8 @@
  * - AnalyzeDocumentOutput - The return type for the analyzeDocument function.
  */
 
-import {ai, isAiEnabled} from '@/ai/genkit';
-import {z} from 'genkit';
+import {ai, isAiEnabled, getFallbackAnalysis} from '@/ai/genkit';
+import {z} from 'zod';
 
 const AnalyzeDocumentInputSchema = z.object({
   documentDataUri: z
@@ -28,16 +28,17 @@ const AnalyzeDocumentOutputSchema = z.object({
 export type AnalyzeDocumentOutput = z.infer<typeof AnalyzeDocumentOutputSchema>;
 
 export async function analyzeDocument(input: AnalyzeDocumentInput): Promise<AnalyzeDocumentOutput> {
-  // If AI is not enabled, return default analysis
+  // If AI is not enabled, return fallback analysis
   if (!isAiEnabled || !ai || !analyzeDocumentFlow) {
-    return {
-      documentType: 'Document',
-      formattingScore: 75,
-      improvementSuggestions: 'AI analysis not available. Please ensure document formatting is clean and professional.'
-    };
+    return getFallbackAnalysis();
   }
   
-  return analyzeDocumentFlow(input);
+  try {
+    return await analyzeDocumentFlow(input);
+  } catch (error) {
+    console.warn('AI document analysis failed, using fallback:', error);
+    return getFallbackAnalysis();
+  }
 }
 
 const prompt = ai?.definePrompt({
@@ -77,8 +78,11 @@ const analyzeDocumentFlow = ai?.defineFlow(
     inputSchema: AnalyzeDocumentInputSchema,
     outputSchema: AnalyzeDocumentOutputSchema,
   },
-  async input => {
-    const {output} = await prompt!(input);
+  async (input: AnalyzeDocumentInput) => {
+    if (!prompt) {
+      throw new Error('AI prompt not available');
+    }
+    const {output} = await prompt(input);
     return output!;
   }
 );

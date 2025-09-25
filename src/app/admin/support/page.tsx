@@ -154,7 +154,7 @@ export default function SupportPage() {
             <DialogHeader>
                 <DialogTitle>Reply to Ticket #{currentTicket?.id}</DialogTitle>
                 <DialogDescription>
-                    Your message will be sent to the customer. The ticket status will be updated to "In Progress".
+                    Your message will be sent to the customer. The ticket status will be updated to &quot;In Progress&quot;.
                 </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">

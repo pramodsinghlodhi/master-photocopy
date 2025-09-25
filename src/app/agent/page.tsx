@@ -5,7 +5,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Agent } from '@/lib/types';
-import { AgentOTPLogin } from '@/components/agent/agent-otp-login';
+import { AgentIDLogin } from '@/components/agent/agent-id-login';
 import { AgentOnboarding } from '@/components/agent/agent-onboarding';
 import { AgentDashboard } from '@/components/agent/agent-dashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,32 +17,7 @@ export default function AgentPortalPage() {
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
-  const [testMode, setTestMode] = useState(false);
   const [adminImpersonation, setAdminImpersonation] = useState<any>(null);
-
-  // Test/bypass mode - create a mock agent
-  const mockAgent: Agent = {
-    agentId: "test-agent-1",
-    userRef: "test-agent-1",
-    uid: "test-agent-1",
-    first_name: "Test",
-    last_name: "Agent",
-    phone: "+91-9999999999",
-    email: "test.agent@example.com",
-    status: "active",
-    vehicle: {
-      type: "bike",
-      number: "DL-12-TEST-1234"
-    },
-    onboarding: {
-      idProofUrl: "https://example.com/test-id.jpg",
-      addressProofUrl: "https://example.com/test-address.jpg",
-      vehicleProofUrl: "https://example.com/test-vehicle.jpg",
-      completed: true
-    },
-    createdAt: new Date(),
-    updatedAt: new Date()
-  };
 
   useEffect(() => {
     // Check for admin impersonation first
@@ -79,46 +54,33 @@ export default function AgentPortalPage() {
       return;
     }
 
-    // Check for test mode in URL params
-    const urlParams = new URLSearchParams(window.location.search);
-    const isTestMode = urlParams.get('test') === 'true';
-    
-    if (isTestMode) {
-      setTestMode(true);
-      setUser({ uid: 'test-agent-1' });
-      setAgent(mockAgent);
-      setLoading(false);
-      setAuthChecked(true);
-      return;
-    }
-
-    if (!auth) {
-      setLoading(false);
-      setAuthChecked(true);
-      return;
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser);
-      
-      if (firebaseUser && db) {
-        // Check if agent profile exists
-        const agentDoc = await getDoc(doc(db, 'agents', firebaseUser.uid));
-        if (agentDoc.exists()) {
-          const agentData = agentDoc.data() as Agent;
-          setAgent({ ...agentData, agentId: firebaseUser.uid });
-        }
+    // Check if agent is already logged in (stored in sessionStorage)
+    const storedAgent = sessionStorage.getItem('agentSession');
+    if (storedAgent) {
+      try {
+        const agentData = JSON.parse(storedAgent);
+        setUser({ uid: agentData.agentId });
+        setAgent(agentData);
+        setLoading(false);
+        setAuthChecked(true);
+        return;
+      } catch (error) {
+        console.error('Error parsing stored agent session:', error);
+        sessionStorage.removeItem('agentSession');
       }
-      
-      setLoading(false);
-      setAuthChecked(true);
-    });
+    }
 
-    return () => unsubscribe();
+    setLoading(false);
+    setAuthChecked(true);
   }, []);
 
-  const handleLoginSuccess = (firebaseUser: any) => {
-    setUser(firebaseUser);
+  const handleLoginSuccess = (agentData: any) => {
+    // Store agent session in sessionStorage
+    sessionStorage.setItem('agentSession', JSON.stringify(agentData));
+    // Also store agent data for login history access
+    sessionStorage.setItem('agentData', JSON.stringify(agentData));
+    setUser({ uid: agentData.agentId });
+    setAgent(agentData);
   };
 
   const handleOnboardingComplete = (newAgent: Agent) => {
@@ -134,9 +96,14 @@ export default function AgentPortalPage() {
         return;
       }
 
+      // Clear agent session
+      sessionStorage.removeItem('agentSession');
+      
+      // Clear Firebase auth if exists (for backward compatibility)
       if (auth) {
         await signOut(auth);
       }
+      
       setUser(null);
       setAgent(null);
     } catch (error) {
@@ -159,32 +126,9 @@ export default function AgentPortalPage() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-        {/* Mobile-friendly test mode banner */}
-        <div className="p-4">
-          <Card className="max-w-sm mx-auto mb-6 border-2 border-dashed border-yellow-300 bg-yellow-50">
-            <CardHeader className="text-center pb-3">
-              <CardTitle className="text-lg flex items-center justify-center gap-2">
-                🧪 <span>Test Mode</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <Button 
-                onClick={() => window.location.href = '/agent?test=true'} 
-                className="w-full mb-3 bg-yellow-500 hover:bg-yellow-600 text-yellow-900 font-medium"
-                size="lg"
-              >
-                🚀 Try Agent Dashboard
-              </Button>
-              <p className="text-xs text-yellow-700 text-center leading-relaxed">
-                Skip login and test the delivery agent interface with sample orders
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-        
         {/* Main login component */}
-        <div className="px-4">
-          <AgentOTPLogin onLoginSuccess={handleLoginSuccess} />
+        <div className="p-4">
+          <AgentIDLogin onLoginSuccess={handleLoginSuccess} />
         </div>
       </div>
     );
@@ -283,21 +227,6 @@ export default function AgentPortalPage() {
                 >
                   Exit Impersonation
                 </button>
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-      {testMode && (
-        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <AlertTriangle className="h-5 w-5" />
-            </div>
-            <div className="ml-3">
-              <p className="text-sm">
-                <strong>Test Mode Active:</strong> You are using a mock agent account for testing purposes.
-                <a href="/agent" className="underline ml-2">Exit Test Mode</a>
               </p>
             </div>
           </div>

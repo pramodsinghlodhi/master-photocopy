@@ -125,12 +125,13 @@ async function updateRelatedOrders(phoneNumber: string, message?: WebhookPayload
   // Update timeline for all matching orders
   const batch = db.batch();
   let firstOrderId: string | null = null;
+  const currentTimestamp = new Date();
 
   ordersSnap.docs.forEach((doc: any, index: number) => {
     if (index === 0) firstOrderId = doc.id;
     
     const timelineEntry = {
-      ts: admin.firestore.FieldValue.serverTimestamp(),
+      ts: currentTimestamp,
       actor: "webhook",
       action: message?.media ? "media_received" : "message_received",
       note: JSON.stringify({

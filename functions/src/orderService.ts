@@ -20,12 +20,13 @@ class OrderService {
       }
 
       // Update order
+      const currentTimestamp = new Date();
       const orderRef = db.collection("orders").doc(orderId);
       await orderRef.update({
         assignedAgentId: agentId,
         status: 'Processing',
         timeline: admin.firestore.FieldValue.arrayUnion({
-          ts: admin.firestore.FieldValue.serverTimestamp(),
+          ts: currentTimestamp,
           actor: assignedBy,
           action: 'order_assigned',
           note: `Order assigned to agent ${agent?.first_name} ${agent?.last_name}`
@@ -86,10 +87,11 @@ class OrderService {
       }
 
       // Prepare update data
+      const currentTimestamp = new Date();
       const updateData: any = {
         status,
         timeline: admin.firestore.FieldValue.arrayUnion({
-          ts: admin.firestore.FieldValue.serverTimestamp(),
+          ts: currentTimestamp,
           actor: updatedBy,
           action: 'status_update',
           note: note || `Status updated to ${status}`

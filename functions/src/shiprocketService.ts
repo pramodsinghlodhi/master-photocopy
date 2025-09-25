@@ -150,6 +150,7 @@ class ShiprocketService {
       const shipmentResponse: ShiprocketResponse = response.data;
 
       // Update order with shipment details
+      const currentTimestamp = new Date();
       await orderDoc.ref.update({
         'delivery.shiprocket_shipment_id': shipmentResponse.shipment_id.toString(),
         'delivery.tracking_url': `https://shiprocket.in/tracking/${shipmentResponse.awb_code}`,
@@ -157,7 +158,7 @@ class ShiprocketService {
         'delivery.courier_name': shipmentResponse.courier_name,
         status: 'Shipped',
         timeline: admin.firestore.FieldValue.arrayUnion({
-          ts: admin.firestore.FieldValue.serverTimestamp(),
+          ts: currentTimestamp,
           actor: 'system',
           action: 'shipment_created',
           note: `Shiprocket shipment created. AWB: ${shipmentResponse.awb_code}, Courier: ${shipmentResponse.courier_name}`
@@ -243,10 +244,11 @@ class ShiprocketService {
       }
 
       // Update order status
+      const currentTimestamp = new Date();
       await orderDoc.ref.update({
         status: orderStatus,
         timeline: admin.firestore.FieldValue.arrayUnion({
-          ts: admin.firestore.FieldValue.serverTimestamp(),
+          ts: currentTimestamp,
           actor: 'shiprocket',
           action: 'status_update',
           note: `Status updated to ${status}. AWB: ${awb_code}`

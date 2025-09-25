@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 
 // JWT Secret - use a strong secret in production
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
@@ -169,5 +170,5 @@ export function isAdmin(user: UserPayload | null): boolean {
  * Generate a secure random string for session IDs
  */
 export function generateSessionId(): string {
-  return require('crypto').randomBytes(32).toString('hex');
+  return crypto.randomBytes(32).toString('hex');
 }

@@ -10,8 +10,11 @@ export function middleware(request: NextRequest) {
   
   // Define protected routes
   const adminProtectedPaths = ['/admin'];
-  const userProtectedPaths = ['/dashboard', '/orders', '/profile', '/agent'];
+  const userProtectedPaths = ['/dashboard', '/orders', '/profile'];
   const authPaths = ['/login', '/register', '/auth'];
+  
+  // Agent route has its own authentication system (Agent ID/Password)
+  const agentPaths = ['/agent'];
   
   // Check if this is an unprotected admin route
   const isAdminUnprotectedRoute = adminUnprotectedPaths.some(path => pathname.startsWith(path));
@@ -27,6 +30,12 @@ export function middleware(request: NextRequest) {
   );
   const isUserRoute = userProtectedPaths.some(path => pathname.startsWith(path));
   const isAuthRoute = authPaths.some(path => pathname.startsWith(path));
+  const isAgentRoute = agentPaths.some(path => pathname.startsWith(path));
+  
+  // Agent routes have their own authentication system - skip Firebase auth
+  if (isAgentRoute) {
+    return NextResponse.next();
+  }
   
   // Get user from Firebase token
   const firebaseToken = getFirebaseTokenFromRequest(request);

@@ -36,6 +36,7 @@ import {
   MoreHorizontal,
   Maximize2,
   X,
+  ExternalLink,
   RefreshCw,
   Loader2,
   Trash
@@ -47,6 +48,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { UploadProgress, MultiUploadProgress } from '@/components/ui/upload-progress';
+import { useFileUpload } from '@/hooks/use-file-upload';
 
 // Types
 interface OrderStats {
@@ -74,8 +77,44 @@ export function OrderManagement() {
     updateOrder,
     bulkUpdateOrders,
     deleteOrder,
+    assignAgent,
+    unassignAgent,
+    bulkAssignAgent,
+    bulkUnassignAgent,
     refetch
   } = useOrders();
+
+  // Use the file upload hook
+  const {
+    uploads,
+    uploadFiles,
+    cancelUpload,
+    cancelAllUploads,
+    clearCompleted,
+    isUploading: globalIsUploading,
+    hasErrors: globalHasErrors,
+    completedCount,
+    totalCount
+  } = useFileUpload({
+    onUploadComplete: (id, response) => {
+      showSuccessAlert({
+        title: "Upload Successful",
+        description: response.message || "Files uploaded successfully"
+      });
+    },
+    onUploadError: (id, error) => {
+      showErrorAlert({
+        title: "Upload Failed",
+        description: error
+      });
+    },
+    onAllUploadsComplete: () => {
+      // Refresh file list for the current order if dialog is open
+      if (selectedOrder) {
+        fetchOrderFiles(selectedOrder.id);
+      }
+    }
+  });
   
   // Local component state
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -86,8 +125,10 @@ export function OrderManagement() {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [showBulkActions, setShowBulkActions] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<{[orderId: string]: number}>({});
+  
+  // Simple upload state for dialog compatibility
   const [isUploading, setIsUploading] = useState<{[orderId: string]: boolean}>({});
+  const [uploadProgress, setUploadProgress] = useState<{[orderId: string]: number}>({});
   
   // Search and filter state (managed locally, applied via useOrders hook)
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,6 +139,18 @@ export function OrderManagement() {
     urgent?: boolean;
     assignedAgent?: string;
   }>({});
+
+  // Sync local filters with main filters
+  useEffect(() => {
+    setFilters({
+      search: searchTerm,
+      status: localFilters.status,
+      paymentMethod: localFilters.paymentMethod,
+      deliveryType: localFilters.deliveryType,
+      urgent: localFilters.urgent,
+      agentId: localFilters.assignedAgent === 'unassigned' ? 'unassigned' : localFilters.assignedAgent
+    });
+  }, [searchTerm, localFilters, setFilters]);
 
   // Error handling
   useEffect(() => {
@@ -124,52 +177,103 @@ export function OrderManagement() {
   const fetchOrderFiles = async (orderId: string) => {
     setFilesLoading(true);
     try {
+      console.log('Fetching files for order:', orderId);
       const response = await fetch(`/api/orders/${orderId}/files`);
+      
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+      
       if (response.ok) {
         const result = await response.json();
-        setOrderFiles(result.data || []);
+        console.log('Files fetched successfully:', result);
+        setOrderFiles(result.files || []);
       } else {
-        console.error('Failed to fetch order files');
+        // Get response text first to see what we actually received
+        const responseText = await response.text();
+        console.error('Error response text:', responseText);
+        
+        let errorResult;
+        try {
+          errorResult = JSON.parse(responseText);
+        } catch {
+          errorResult = { 
+            error: `HTTP ${response.status}: ${response.statusText}`,
+            details: responseText 
+          };
+        }
+        
+        console.error('Failed to fetch order files:', errorResult);
+        toast({
+          title: "Error",
+          description: `Failed to fetch order files: ${errorResult.error || errorResult.details || 'Unknown error'}`,
+          variant: "destructive",
+        });
         setOrderFiles([]);
       }
     } catch (error) {
       console.error('Error fetching order files:', error);
+      toast({
+        title: "Error",
+        description: `Network error: ${error instanceof Error ? error.message : 'Failed to fetch files'}`,
+        variant: "destructive",
+      });
       setOrderFiles([]);
     } finally {
       setFilesLoading(false);
     }
   };
 
-  // Download file (placeholder - implement with your file storage)
+  // Download file (improved with proper URL fetching)
   const downloadFile = async (file: OrderFile) => {
+    if (!selectedOrder) return;
+    
     try {
-      // TODO: Implement file download from your storage solution
-      // For now, open the file URL in a new tab
-      if (file.url) {
-        window.open(file.url, '_blank');
+      const response = await fetch(`/api/orders/${selectedOrder.id}/files?fileId=${file.id}&action=download`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get file URL');
       }
+      
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = data.url;
+      link.download = file.name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
     } catch (error) {
       console.error('Error downloading file:', error);
       toast({
         title: "Error",
-        description: "Failed to download file",
+        description: error instanceof Error ? error.message : "Failed to download file",
         variant: "destructive",
       });
     }
   };
 
-  // Preview file (placeholder - implement with your file storage)
+  // Preview file (improved with proper URL fetching)
   const previewFileFunc = async (file: OrderFile) => {
+    if (!selectedOrder) return;
+    
     setPreviewLoading(true);
     try {
-      // TODO: Implement file preview from your storage solution
+      const response = await fetch(`/api/orders/${selectedOrder.id}/files?fileId=${file.id}&action=view`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to get file URL');
+      }
+      
       setPreviewFile(file);
-      setPreviewUrl(file.url || '');
+      setPreviewUrl(data.url);
     } catch (error) {
       console.error('Error loading file preview:', error);
       toast({
         title: "Error",
-        description: "Failed to load file preview",
+        description: error instanceof Error ? error.message : "Failed to load file preview",
         variant: "destructive",
       });
     } finally {
@@ -183,22 +287,61 @@ export function OrderManagement() {
     setPreviewUrl('');
   };
 
-  // Download all files (placeholder)
+  // Download all files (now implemented with bulk download API)
   const downloadAllFiles = async (orderId: string) => {
     if (orderFiles.length === 0) return;
     
     try {
-      // TODO: Implement bulk file download from your storage solution
       toast({
-        title: "Info",
-        description: "Bulk file download not yet implemented",
+        title: "Preparing Download",
+        description: "Creating ZIP file with all order files...",
         variant: "default",
       });
+      
+      // Fetch the ZIP file from the bulk download API
+      const response = await fetch(`/api/orders/${orderId}/files/bulk-download`);
+      
+      if (!response.ok) {
+        let errorMessage = 'Failed to create download';
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } else {
+            errorMessage = `HTTP ${response.status} - ${response.statusText}`;
+          }
+        } catch (parseError) {
+          console.warn('Failed to parse error response:', parseError);
+          errorMessage = `HTTP ${response.status} - ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
+      }
+      
+      // Get the blob data
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `order-${orderId}-files.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Download Started",
+        description: "All files are being downloaded as a ZIP archive",
+        variant: "default",
+      });
+      
     } catch (error) {
       console.error('Error downloading files:', error);
       toast({
         title: "Error",
-        description: "Failed to download files",
+        description: error instanceof Error ? error.message : "Failed to download files",
         variant: "destructive",
       });
     }
@@ -305,13 +448,15 @@ export function OrderManagement() {
   // Bulk assign agent
   const handleBulkAssignAgent = async (agentId: string) => {
     try {
-      await bulkUpdateOrders(Array.from(selectedOrders), 'assign-agent', { assignedAgentId: agentId });
-      setSelectedOrders(new Set());
-      toast({
-        title: "Success",
-        description: `${selectedOrders.size} orders assigned successfully`,
-        variant: "default",
-      });
+      const success = await bulkAssignAgent(Array.from(selectedOrders), agentId, 'admin');
+      if (success) {
+        setSelectedOrders(new Set());
+        toast({
+          title: "Success",
+          description: `${selectedOrders.size} orders assigned successfully`,
+          variant: "default",
+        });
+      }
     } catch (error) {
       console.error('Error bulk assigning agent:', error);
       toast({
@@ -325,17 +470,40 @@ export function OrderManagement() {
   // Assign agent to order
   const handleAssignAgent = async (orderId: string, agentId: string) => {
     try {
-      await updateOrder(orderId, { assignedAgentId: agentId });
-      toast({
-        title: "Success",
-        description: "Agent assigned successfully",
-        variant: "default",
-      });
+      const success = await assignAgent(orderId, agentId, 'admin');
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Agent assigned successfully",
+          variant: "default",
+        });
+      }
     } catch (error) {
       console.error('Error assigning agent:', error);
       toast({
         title: "Error",
         description: "Failed to assign agent",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Unassign agent from order
+  const handleUnassignAgent = async (orderId: string, reason?: string) => {
+    try {
+      const success = await unassignAgent(orderId, reason, 'admin');
+      if (success) {
+        toast({
+          title: "Success",
+          description: "Agent unassigned successfully",
+          variant: "default",
+        });
+      }
+    } catch (error) {
+      console.error('Error unassigning agent:', error);
+      toast({
+        title: "Error",
+        description: "Failed to unassign agent",
         variant: "destructive",
       });
     }
@@ -381,53 +549,35 @@ export function OrderManagement() {
     if (!files || files.length === 0) return;
     
     try {
-      // Set upload state
+      // Set local upload state for backward compatibility
       setIsUploading(prev => ({ ...prev, [orderId]: true }));
       setUploadProgress(prev => ({ ...prev, [orderId]: 0 }));
-
-      const formData = new FormData();
-      Array.from(files).forEach(file => {
-        formData.append('files', file);
-      });
-      formData.append('groupName', 'Admin Upload');
-
-      // Simulate progress (since we can't track real progress with current setup)
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          const current = prev[orderId] || 0;
-          if (current < 90) {
-            return { ...prev, [orderId]: current + 10 };
-          }
-          return prev;
-        });
-      }, 200);
-
-      const response = await fetch(`/api/orders/${orderId}/files`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      clearInterval(progressInterval);
+      
+      // Convert FileList to File array
+      const fileArray = Array.from(files);
+      
+      // Use the upload hook with custom form data builder
+      await uploadFiles(
+        fileArray,
+        `/api/orders/${orderId}/files`,
+        (files) => {
+          const formData = new FormData();
+          files.forEach(file => {
+            formData.append('files', file);
+          });
+          formData.append('groupName', 'Admin Upload');
+          return formData;
+        }
+      );
+      
+      // Update progress to complete
       setUploadProgress(prev => ({ ...prev, [orderId]: 100 }));
-
-      if (response.ok) {
-        const result = await response.json();
-        showSuccessAlert({
-          title: "Upload Successful",
-          description: result.message
-        });
-        
-        // Refresh file list
-        await fetchOrderFiles(orderId);
-        
-        // Clear progress after a delay
-        setTimeout(() => {
-          setUploadProgress(prev => ({ ...prev, [orderId]: 0 }));
-        }, 1000);
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to upload files');
-      }
+      
+      // Clear progress after a delay
+      setTimeout(() => {
+        setUploadProgress(prev => ({ ...prev, [orderId]: 0 }));
+      }, 1000);
+      
     } catch (error: any) {
       console.error('Error uploading files:', error);
       showErrorAlert({
@@ -468,18 +618,80 @@ export function OrderManagement() {
               <span className="text-sm text-muted-foreground">
                 {selectedOrders.size} selected
               </span>
-              <Select onValueChange={handleBulkAssignAgent}>
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="Assign to agent..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {agents.map(agent => (
-                    <SelectItem key={agent.id} value={agent.id}>
-                      {agent.first_name} {agent.last_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              
+              {/* Check if any selected orders can be assigned */}
+              {Array.from(selectedOrders).some(orderId => {
+                const order = orders.find(o => o.id === orderId);
+                return order && !order.assignedAgentId && order.delivery?.type === 'own';
+              }) && (
+                <Select onValueChange={handleBulkAssignAgent}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Assign to agent..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {agents.filter(agent => agent.status === 'available' || agent.status === 'busy').map(agent => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.first_name} {agent.last_name}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          ({agent.assigned_orders_count || 0} orders)
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              {/* Check if any selected orders have assigned agents */}
+              {Array.from(selectedOrders).some(orderId => {
+                const order = orders.find(o => o.id === orderId);
+                return order && order.assignedAgentId;
+              }) && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const assignedOrderIds = Array.from(selectedOrders).filter(orderId => {
+                      const order = orders.find(o => o.id === orderId);
+                      return order && order.assignedAgentId;
+                    });
+                    
+                    if (assignedOrderIds.length > 0) {
+                      confirmAndExecute(
+                        {
+                          title: 'Bulk Unassign Agents',
+                          message: `Are you sure you want to unassign agents from ${assignedOrderIds.length} selected orders?`,
+                          confirmText: 'Yes, unassign all',
+                          cancelText: 'Cancel',
+                          type: 'warning'
+                        },
+                        async () => {
+                          const success = await bulkUnassignAgent(assignedOrderIds, 'Bulk unassignment by admin');
+                          if (success) {
+                            setSelectedOrders(new Set());
+                            toast({
+                              title: "Success",
+                              description: `${assignedOrderIds.length} orders unassigned successfully`,
+                              variant: "default",
+                            });
+                          }
+                        },
+                        {
+                          title: 'Agents Unassigned',
+                          description: 'Selected orders have been successfully unassigned.'
+                        },
+                        {
+                          title: 'Unassign Failed',
+                          description: 'Failed to unassign agents from selected orders.'
+                        }
+                      );
+                    }
+                  }}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Unassign Selected
+                </Button>
+              )}
+              
               <Button 
                 variant="outline" 
                 size="sm"
@@ -631,6 +843,29 @@ export function OrderManagement() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Assigned Agent</label>
+              <Select value={filters.agentId || 'all'} onValueChange={(value) => 
+                setLocalFilters(prev => ({ ...prev, agentId: value === 'all' ? undefined : value }))
+              }>
+                <SelectTrigger>
+                  <SelectValue placeholder="All agents" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All agents</SelectItem>
+                  <SelectItem value="unassigned">Unassigned</SelectItem>
+                  {agents.map(agent => (
+                    <SelectItem key={agent.id} value={agent.id}>
+                      {agent.first_name} {agent.last_name}
+                      <span className="ml-2 text-xs text-muted-foreground">
+                        ({agent.assigned_orders_count || 0})
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mt-4">
@@ -643,19 +878,14 @@ export function OrderManagement() {
               Urgent Only
             </Button>
             
-            {/* TODO: Add assigned agent filter when implemented in OrderFilters type */}
-            {/*
             <Button
               variant="outline"
               size="sm"
-              onClick={() => {
-                // Implement assigned agent filtering
-              }}
+              onClick={() => setLocalFilters(prev => ({ ...prev, agentId: 'unassigned' }))}
             >
               <UserPlus className="h-4 w-4 mr-2" />
-              Unassigned
+              Unassigned Only
             </Button>
-            */}
 
             <Button
               variant="outline"
@@ -694,6 +924,7 @@ export function OrderManagement() {
                   <TableHead>Order ID</TableHead>
                   <TableHead>Customer</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Assigned Agent</TableHead>
                   <TableHead>Delivery Type</TableHead>
                   <TableHead>Payment</TableHead>
                   <TableHead>Total</TableHead>
@@ -753,6 +984,46 @@ export function OrderManagement() {
                             <SelectItem value="Returned">Returned</SelectItem>
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        {order.assignedAgentId ? (
+                          <div className="flex items-center gap-2">
+                            <div>
+                              <div className="font-medium text-sm">
+                                {agents.find(agent => agent.id === order.assignedAgentId)?.first_name}{' '}
+                                {agents.find(agent => agent.id === order.assignedAgentId)?.last_name || 'Unknown'}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {agents.find(agent => agent.id === order.assignedAgentId)?.phone || 
+                                 agents.find(agent => agent.id === order.assignedAgentId)?.phone_number || 'No phone'}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">
+                              Assigned
+                            </Badge>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground text-sm">Unassigned</span>
+                            {order.delivery?.type === 'own' && (
+                              <Select onValueChange={(agentId) => handleAssignAgent(order.id, agentId)}>
+                                <SelectTrigger className="w-32 h-7 text-xs">
+                                  <SelectValue placeholder="Assign..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {agents.filter(agent => agent.status === 'available' || agent.status === 'busy').map(agent => (
+                                    <SelectItem key={agent.id} value={agent.id} className="text-xs">
+                                      {agent.first_name} {agent.last_name}
+                                      <span className="ml-2 text-muted-foreground">
+                                        ({agent.assigned_orders_count || 0})
+                                      </span>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Select 
@@ -833,17 +1104,61 @@ export function OrderManagement() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent>
+                              {/* Agent Assignment Section */}
                               {!order.assignedAgentId && order.delivery?.type === 'own' && (
                                 <>
-                                  {agents.map(agent => (
+                                  <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
+                                    Assign to Agent
+                                  </div>
+                                  {agents.filter(agent => agent.status === 'available' || agent.status === 'busy').map(agent => (
                                     <DropdownMenuItem
                                       key={agent.id}
                                       onClick={() => handleAssignAgent(order.id, agent.id)}
+                                      className="pl-4"
                                     >
                                       <UserPlus className="h-4 w-4 mr-2" />
-                                      Assign to {agent.first_name}
+                                      {agent.first_name} {agent.last_name}
+                                      <span className="ml-auto text-xs text-muted-foreground">
+                                        ({agent.assigned_orders_count || 0} orders)
+                                      </span>
                                     </DropdownMenuItem>
                                   ))}
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              
+                              {/* Unassign Agent Option */}
+                              {order.assignedAgentId && (
+                                <>
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      confirmAndExecute(
+                                        {
+                                          title: 'Unassign Agent',
+                                          message: `Are you sure you want to unassign the agent from order ${order.orderId || order.id}?`,
+                                          confirmText: 'Yes, unassign',
+                                          cancelText: 'Cancel',
+                                          type: 'warning'
+                                        },
+                                        async () => {
+                                          await handleUnassignAgent(order.id, 'Manual unassignment by admin');
+                                        },
+                                        {
+                                          title: 'Agent Unassigned',
+                                          description: 'Agent has been successfully unassigned from the order.'
+                                        },
+                                        {
+                                          title: 'Unassign Failed',
+                                          description: 'Failed to unassign the agent. Please try again.'
+                                        }
+                                      );
+                                    }}
+                                    className="text-orange-600"
+                                  >
+                                    <XCircle className="h-4 w-4 mr-2" />
+                                    Unassign Agent
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
                                 </>
                               )}
                               
@@ -915,17 +1230,32 @@ export function OrderManagement() {
         </CardContent>
       </Card>
 
-      {/* File Preview Modal */}
+      {/* Enhanced File Preview Modal */}
       {previewFile && (
         <Dialog open={!!previewFile} onOpenChange={closePreview}>
-          <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden">
+          <DialogContent className="max-w-6xl max-h-[95vh] overflow-hidden">
             <DialogHeader>
               <div className="flex items-center justify-between">
                 <DialogTitle className="flex items-center gap-2">
                   {getFileIcon(previewFile.type)}
-                  {previewFile.name}
+                  <div className="flex flex-col items-start">
+                    <span className="truncate max-w-[300px]">{previewFile.name}</span>
+                    <span className="text-sm text-muted-foreground font-normal">
+                      {formatFileSize(previewFile.size)} • {previewFile.type}
+                    </span>
+                  </div>
                 </DialogTitle>
                 <div className="flex items-center gap-2">
+                  {previewFile.type === 'application/pdf' && previewUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(previewUrl, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Open in New Tab
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -946,29 +1276,65 @@ export function OrderManagement() {
             </DialogHeader>
             <div className="flex-1 overflow-hidden">
               {previewLoading ? (
-                <div className="flex items-center justify-center h-64">
+                <div className="flex items-center justify-center h-96">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   <span className="ml-2">Loading preview...</span>
                 </div>
               ) : (
-                <div className="h-full max-h-[70vh] overflow-auto border rounded-lg">
+                <div className="h-full max-h-[75vh] overflow-auto border rounded-lg bg-gray-50">
                   {previewFile.type.startsWith('image/') ? (
-                    <img 
-                      src={previewUrl} 
-                      alt={previewFile.name}
-                      className="w-full h-auto"
-                    />
+                    <div className="p-4 flex justify-center">
+                      <img 
+                        src={previewUrl} 
+                        alt={previewFile.name}
+                        className="max-w-full h-auto shadow-lg rounded-lg"
+                        style={{ maxHeight: '70vh' }}
+                      />
+                    </div>
                   ) : previewFile.type === 'application/pdf' ? (
-                    <iframe
-                      src={`${previewUrl}#toolbar=1&navpanes=1&scrollbar=1`}
-                      className="w-full h-full min-h-[500px]"
-                      title={previewFile.name}
-                    />
+                    <div className="w-full h-full min-h-[600px] bg-white">
+                      <iframe
+                        src={`${previewUrl}#toolbar=1&navpanes=1&scrollbar=1&view=FitH`}
+                        className="w-full h-full min-h-[600px] border-0"
+                        title={previewFile.name}
+                        allow="fullscreen"
+                      />
+                      {/* Fallback for browsers that don't support PDF viewing */}
+                      <div className="hidden" id="pdf-fallback">
+                        <div className="flex flex-col items-center justify-center h-64 text-center p-6">
+                          <FileText className="h-16 w-16 mb-4 text-red-500" />
+                          <h3 className="text-lg font-semibold mb-2">PDF Preview Not Available</h3>
+                          <p className="text-muted-foreground mb-4">
+                            Your browser doesn't support PDF viewing. Download the file to view it.
+                          </p>
+                          <Button
+                            onClick={() => downloadFile(previewFile)}
+                            className="gap-2"
+                          >
+                            <Download className="h-4 w-4" />
+                            Download PDF
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : previewFile.type.startsWith('text/') ? (
+                    <div className="p-6">
+                      <div className="bg-white border rounded-lg p-4 font-mono text-sm">
+                        <iframe
+                          src={previewUrl}
+                          className="w-full h-96 border-0"
+                          title={previewFile.name}
+                        />
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                       <FileText className="h-16 w-16 mb-4" />
-                      <p>Preview not available for this file type</p>
-                      <p className="text-sm">{previewFile.type}</p>
+                      <p className="text-lg font-medium">Preview not available</p>
+                      <p className="text-sm mb-2">{previewFile.type}</p>
+                      <p className="text-sm mb-4 text-center max-w-md">
+                        This file type cannot be previewed in the browser. Download the file to view its contents.
+                      </p>
                       <Button
                         variant="outline"
                         className="mt-4"
@@ -1347,12 +1713,12 @@ function OrderDetailsDialog({
                   <div className="w-2 h-2 bg-primary rounded-full mt-2 -ml-5 border-2 border-background"></div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
-                      <p className="font-medium">{event.action.replace('_', ' ').toUpperCase()}</p>
+                      <p className="font-medium">{(event.action || 'unknown_action').replace('_', ' ').toUpperCase()}</p>
                       <span className="text-sm text-muted-foreground">
                         {event.ts?.toDate ? event.ts.toDate().toLocaleString() : 'Unknown time'}
                       </span>
                     </div>
-                    <p className="text-sm text-muted-foreground">By: {event.actor}</p>
+                    <p className="text-sm text-muted-foreground">By: {event.actor || 'Unknown'}</p>
                     {event.note && <p className="text-sm mt-1">{event.note}</p>}
                   </div>
                 </div>

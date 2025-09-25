@@ -97,7 +97,7 @@ export default function TestAlerts() {
               <li>• Combined SweetAlert2 + Toast notifications</li>
               <li>• Confirm and execute pattern with error handling</li>
               <li>• Success and error alerts with optional modal display</li>
-              <li>• Consistent theming with your app's design</li>
+              <li>• Consistent theming with your app&apos;s design</li>
             </ul>
           </div>
         </CardContent>

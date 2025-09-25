@@ -7,24 +7,69 @@ export interface Agent {
   last_name: string;
   email: string;
   phone_number: string;
+  phone?: string; // Support both phone formats
   is_active: boolean;
+  status?: 'available' | 'busy' | 'offline' | 'inactive';
+  approved?: boolean;
+  verification_status?: string;
   created_at: string;
   updated_at: string;
   assigned_orders_count?: number;
+  performance?: {
+    orders_assigned: number;
+    deliveries_completed: number;
+    average_rating: number;
+    total_earnings: number;
+  };
+  location?: {
+    latitude: number | null;
+    longitude: number | null;
+    last_updated: any;
+  };
+  city?: string;
+  state?: string;
+  current_order_id?: string;
+  assignedAt?: any;
 }
 
-// GET /api/agents - Fetch all agents
+// GET /api/agents - Fetch all agents with enhanced filtering
 export async function GET(request: NextRequest) {
   try {
     const db = getFirebaseAdminDB();
 
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('active') === 'true';
+    const available = searchParams.get('available') === 'true';
+    const approved = searchParams.get('approved');
+    const status = searchParams.get('status');
+    const city = searchParams.get('city');
 
     let agentsQuery = db.collection('agents').orderBy('created_at', 'desc');
 
+    // Legacy support for is_active field
     if (activeOnly) {
       agentsQuery = agentsQuery.where('is_active', '==', true);
+    }
+
+    // New status-based filtering
+    if (available) {
+      // Get available agents (approved, active status)
+      agentsQuery = agentsQuery.where('approved', '==', true);
+      if (!status) {
+        agentsQuery = agentsQuery.where('status', '==', 'available');
+      }
+    }
+
+    if (approved !== null && approved !== undefined) {
+      agentsQuery = agentsQuery.where('approved', '==', approved === 'true');
+    }
+
+    if (status && status !== 'all') {
+      agentsQuery = agentsQuery.where('status', '==', status);
+    }
+
+    if (city && city !== 'all') {
+      agentsQuery = agentsQuery.where('city', '==', city);
     }
 
     const querySnapshot = await agentsQuery.get();
@@ -34,9 +79,28 @@ export async function GET(request: NextRequest) {
       const data = doc.data();
       agents.push({
         id: doc.id,
-        ...data,
-        created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at,
-        updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at,
+        first_name: data.first_name || '',
+        last_name: data.last_name || '',
+        email: data.email || '',
+        phone_number: data.phone_number || data.phone || '',
+        phone: data.phone || data.phone_number || '',
+        is_active: data.is_active ?? (data.status !== 'inactive'),
+        status: data.status || (data.is_active ? 'available' : 'inactive'),
+        approved: data.approved ?? data.is_active,
+        verification_status: data.verification_status || 'approved',
+        created_at: data.created_at?.toDate?.()?.toISOString() || data.created_at || data.registeredAt?.toDate?.()?.toISOString(),
+        updated_at: data.updated_at?.toDate?.()?.toISOString() || data.updated_at || data.updatedAt?.toDate?.()?.toISOString(),
+        performance: data.performance || {
+          orders_assigned: 0,
+          deliveries_completed: 0,
+          average_rating: 0,
+          total_earnings: 0
+        },
+        location: data.location,
+        city: data.city,
+        state: data.state,
+        current_order_id: data.current_order_id,
+        assignedAt: data.assignedAt
       } as Agent);
     });
 
@@ -53,7 +117,14 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: agents
+      data: agents,
+      filters: {
+        active: activeOnly,
+        available,
+        approved,
+        status,
+        city
+      }
     });
 
   } catch (error: any) {

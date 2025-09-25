@@ -34,6 +34,10 @@ interface UseOrdersReturn {
   bulkUpdateOrders: (orderIds: string[], action: string, data: any) => Promise<boolean>;
   deleteOrder: (orderId: string) => Promise<boolean>;
   createOrder: (orderData: Partial<Order>) => Promise<boolean>;
+  assignAgent: (orderId: string, agentId: string, assignedBy?: string) => Promise<boolean>;
+  unassignAgent: (orderId: string, reason?: string, unassignedBy?: string) => Promise<boolean>;
+  bulkAssignAgent: (orderIds: string[], agentId: string, assignedBy?: string) => Promise<boolean>;
+  bulkUnassignAgent: (orderIds: string[], reason?: string, unassignedBy?: string) => Promise<boolean>;
   refetch: () => void;
 }
 
@@ -234,6 +238,148 @@ export function useOrders(): UseOrdersReturn {
     }
   }, []);
 
+  const assignAgent = useCallback(async (orderId: string, agentId: string, assignedBy = 'admin'): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/orders/assign-agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId, agentId, assignedBy }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to assign agent');
+      }
+
+      // Update the local state with the updated order
+      setOrders(prev => 
+        prev.map(order => 
+          order.id === orderId 
+            ? { ...order, ...result.data.order }
+            : order
+        )
+      );
+
+      // Update agent status in local state
+      setAgents(prev =>
+        prev.map(agent =>
+          agent.id === agentId
+            ? { ...agent, status: 'busy', assigned_orders_count: (agent.assigned_orders_count || 0) + 1 }
+            : agent
+        )
+      );
+
+      return true;
+    } catch (err: any) {
+      console.error('Error assigning agent:', err);
+      setError(err.message);
+      return false;
+    }
+  }, []);
+
+  const unassignAgent = useCallback(async (orderId: string, reason?: string, unassignedBy = 'admin'): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/orders/unassign-agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId, reason, unassignedBy }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to unassign agent');
+      }
+
+      // Update the local state with the updated order
+      setOrders(prev => 
+        prev.map(order => 
+          order.id === orderId 
+            ? { ...order, ...result.data.order }
+            : order
+        )
+      );
+
+      // Update agent status in local state
+      if (result.data.previousAgent?.id) {
+        setAgents(prev =>
+          prev.map(agent =>
+            agent.id === result.data.previousAgent.id
+              ? { ...agent, status: 'available', assigned_orders_count: Math.max((agent.assigned_orders_count || 1) - 1, 0) }
+              : agent
+          )
+        );
+      }
+
+      return true;
+    } catch (err: any) {
+      console.error('Error unassigning agent:', err);
+      setError(err.message);
+      return false;
+    }
+  }, []);
+
+  const bulkAssignAgent = useCallback(async (orderIds: string[], agentId: string, assignedBy = 'admin'): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/orders/assign-agent', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderIds, agentId, assignedBy }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to bulk assign agent');
+      }
+
+      // Refetch orders to get updated data
+      await fetchOrders(true);
+      await fetchAgents();
+
+      return true;
+    } catch (err: any) {
+      console.error('Error bulk assigning agent:', err);
+      setError(err.message);
+      return false;
+    }
+  }, [fetchOrders, fetchAgents]);
+
+  const bulkUnassignAgent = useCallback(async (orderIds: string[], reason?: string, unassignedBy = 'admin'): Promise<boolean> => {
+    try {
+      const response = await fetch('/api/orders/unassign-agent', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderIds, reason, unassignedBy }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to bulk unassign agents');
+      }
+
+      // Refetch orders to get updated data
+      await fetchOrders(true);
+      await fetchAgents();
+
+      return true;
+    } catch (err: any) {
+      console.error('Error bulk unassigning agents:', err);
+      setError(err.message);
+      return false;
+    }
+  }, [fetchOrders, fetchAgents]);
+
   const refetch = useCallback(() => {
     fetchOrders(true);
     fetchAgents();
@@ -278,6 +424,10 @@ export function useOrders(): UseOrdersReturn {
     bulkUpdateOrders,
     deleteOrder,
     createOrder,
+    assignAgent,
+    unassignAgent,
+    bulkAssignAgent,
+    bulkUnassignAgent,
     refetch
   };
 }

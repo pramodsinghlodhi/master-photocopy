@@ -167,27 +167,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4 p-4 border rounded-lg">
-                <h3 className="text-lg font-semibold">Notification Channels (Legacy)</h3>
                 <div className="space-y-6">
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <Label htmlFor="whatsapp-enable" className="flex flex-col gap-1">
-                                <span className="font-medium flex items-center gap-2"><MessageSquare className="h-4 w-4"/>WhatsApp Messages</span>
-                            </Label>
-                            <Switch id="whatsapp-enable" defaultChecked/>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="whatsapp-sid">Account SID</Label>
-                            <Input id="whatsapp-sid" placeholder="Your WhatsApp Business Account SID" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="whatsapp-token">Auth Token</Label>
-                            <Input id="whatsapp-token" type="password" placeholder="Your Auth Token" />
-                        </div>
-                    </div>
-
-                    <Separator />
-
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                            <Label htmlFor="email-enable" className="flex flex-col gap-1">

@@ -89,7 +89,26 @@ export function useDashboardData() {
       // Check if all requests were successful and handle Firebase permission errors
       const checkFirebaseError = async (response: Response) => {
         if (!response.ok) {
-          const errorData = await response.json();
+          let errorData: any = {};
+          
+          try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+              errorData = await response.json();
+            } else {
+              errorData = { 
+                error: `HTTP ${response.status} - ${response.statusText}`,
+                details: 'Server returned non-JSON response'
+              };
+            }
+          } catch (parseError) {
+            console.warn('Failed to parse error response:', parseError);
+            errorData = { 
+              error: `HTTP ${response.status} - ${response.statusText}`,
+              details: 'Could not parse error response'
+            };
+          }
+          
           if (errorData.error && (
             errorData.error.includes('Firebase authentication required') ||
             errorData.error.includes('permission') ||

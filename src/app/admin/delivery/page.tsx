@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, doc, updateDoc, where, addDoc } from 'firebase/firestore';
+import { collection, query, onSnapshot, doc, updateDoc, where, addDoc, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Agent, Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { UnifiedAgentForm } from '@/components/admin/unified-agent-form';
+import FileViewer from '@/components/admin/file-viewer';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
@@ -49,8 +51,26 @@ export default function DeliveryManagementPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [agentOrders, setAgentOrders] = useState<Order[]>([]);
-  const [credentialDialogOpen, setCredentialDialogOpen] = useState(false);
   const [onboardingDialogOpen, setOnboardingDialogOpen] = useState(false);
+  const [agentDialogActiveTab, setAgentDialogActiveTab] = useState<'quick' | 'onboarding'>('quick');
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [fileViewerOpen, setFileViewerOpen] = useState(false);
+  const [currentFile, setCurrentFile] = useState<{url: string, name: string, type?: string} | null>(null);
+  const [selectedAgentForPassword, setSelectedAgentForPassword] = useState<Agent | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+
+  // Helper function for file upload simulation
+  const simulateFileUpload = (file: File) => {
+    // In a real app, this would upload to a cloud storage service
+    return `https://storage.example.com/agents/${Date.now()}_${file.name}`;
+  };
+
+  // Function to open file viewer
+  const openFileViewer = (url: string, name: string, type?: string) => {
+    setCurrentFile({ url, name, type });
+    setFileViewerOpen(true);
+  };
+
   const [newAgentForm, setNewAgentForm] = useState({
     firstName: '',
     lastName: '',
@@ -59,7 +79,11 @@ export default function DeliveryManagementPage() {
     vehicleType: 'bike',
     vehicleNumber: '',
     agentId: '',
-    password: ''
+    password: '',
+    idProof: null as File | null,
+    addressProof: null as File | null,
+    vehicleProof: null as File | null,
+    notes: ''
   });
   const [onboardingForm, setOnboardingForm] = useState({
     firstName: '',
@@ -73,9 +97,6 @@ export default function DeliveryManagementPage() {
     vehicleProofFile: null as File | null,
     notes: ''
   });
-  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-  const [selectedAgentForPassword, setSelectedAgentForPassword] = useState<Agent | null>(null);
-  const [newPassword, setNewPassword] = useState('');
 
   // Agent statistics
   const [stats, setStats] = useState({
@@ -181,14 +202,21 @@ export default function DeliveryManagementPage() {
     try {
       if (!db) return;
 
-      if (!newAgentForm.firstName || !newAgentForm.lastName || !newAgentForm.phone) {
+      if (!newAgentForm.firstName || !newAgentForm.lastName || !newAgentForm.phone || !newAgentForm.agentId || !newAgentForm.password) {
         toast({
           title: "Error",
-          description: "Please fill in all required fields.",
+          description: "Please fill in all required fields and generate credentials.",
           variant: "destructive"
         });
         return;
       }
+
+      // Upload documents if provided
+      const documentUrls = {
+        idProofUrl: newAgentForm.idProof ? simulateFileUpload(newAgentForm.idProof) : null,
+        addressProofUrl: newAgentForm.addressProof ? simulateFileUpload(newAgentForm.addressProof) : null,
+        vehicleProofUrl: newAgentForm.vehicleProof ? simulateFileUpload(newAgentForm.vehicleProof) : null
+      };
 
       const agentData = {
         agentId: newAgentForm.agentId,
@@ -196,21 +224,18 @@ export default function DeliveryManagementPage() {
         last_name: newAgentForm.lastName,
         phone: newAgentForm.phone,
         email: newAgentForm.email || '',
+        password: newAgentForm.password, // In production, this should be hashed
         status: 'active',
         vehicle: {
           type: newAgentForm.vehicleType,
           number: newAgentForm.vehicleNumber
         },
-        credentials: {
-          agentId: newAgentForm.agentId,
-          password: newAgentForm.password,
-          createdAt: new Date(),
-          createdBy: 'admin'
-        },
         onboarding: {
           completed: true,
           approvedAt: new Date(),
-          approvedBy: 'admin'
+          approvedBy: 'admin',
+          ...documentUrls,
+          notes: newAgentForm.notes || ''
         },
         createdAt: new Date(),
         updatedAt: new Date()
@@ -219,8 +244,8 @@ export default function DeliveryManagementPage() {
       await addDoc(collection(db, 'agents'), agentData);
 
       toast({
-        title: "Agent Created",
-        description: `Agent account created successfully with ID: ${newAgentForm.agentId}`
+        title: "Agent Created Successfully",
+        description: `Agent account created with ID: ${newAgentForm.agentId}. Credentials have been generated.`
       });
 
       // Reset form
@@ -232,9 +257,16 @@ export default function DeliveryManagementPage() {
         vehicleType: 'bike',
         vehicleNumber: '',
         agentId: '',
-        password: ''
+        password: '',
+        idProof: null,
+        addressProof: null,
+        vehicleProof: null,
+        notes: ''
       });
-      setCredentialDialogOpen(false);
+
+      // Close dialog
+      setOnboardingDialogOpen(false);
+
     } catch (error) {
       console.error('Error creating agent:', error);
       toast({
@@ -340,6 +372,19 @@ export default function DeliveryManagementPage() {
       if (!db) return;
       
       const agentRef = doc(db, 'agents', agentId);
+      
+      // Check if the document exists first
+      const agentDoc = await getDoc(agentRef);
+      if (!agentDoc.exists()) {
+        console.warn(`Agent document ${agentId} does not exist`);
+        toast({
+          title: "Agent Not Found",
+          description: `Agent with ID ${agentId} was not found in the database.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       await updateDoc(agentRef, {
         status,
         updatedAt: new Date()
@@ -353,7 +398,7 @@ export default function DeliveryManagementPage() {
       console.error('Error updating agent status:', error);
       toast({
         title: "Error",
-        description: "Failed to update agent status.",
+        description: `Failed to update agent status: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     }
@@ -364,6 +409,19 @@ export default function DeliveryManagementPage() {
       if (!db || !selectedAgentForPassword || !newPassword.trim()) return;
 
       const agentRef = doc(db, 'agents', selectedAgentForPassword.agentId);
+      
+      // Check if the document exists first
+      const agentDoc = await getDoc(agentRef);
+      if (!agentDoc.exists()) {
+        console.warn(`Agent document ${selectedAgentForPassword.agentId} does not exist`);
+        toast({
+          title: "Agent Not Found",
+          description: `Agent with ID ${selectedAgentForPassword.agentId} was not found in the database.`,
+          variant: "destructive"
+        });
+        return;
+      }
+      
       await updateDoc(agentRef, {
         'credentials.password': newPassword.trim(),
         'credentials.updatedAt': new Date(),
@@ -383,7 +441,7 @@ export default function DeliveryManagementPage() {
       console.error('Error changing password:', error);
       toast({
         title: "Error",
-        description: "Failed to change agent password.",
+        description: `Failed to change agent password: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive"
       });
     }
@@ -408,6 +466,18 @@ export default function DeliveryManagementPage() {
       // In a real app, you might want to soft delete instead of hard delete
       // For now, we'll update status to 'deleted'
       const agentRef = doc(db, 'agents', agentId);
+      
+      // Check if the document exists first
+      const agentDoc = await getDoc(agentRef);
+      if (!agentDoc.exists()) {
+        console.warn(`Agent document ${agentId} does not exist`);
+        showErrorAlert({
+          title: "Agent Not Found",
+          description: `Agent with ID ${agentId} was not found in the database.`
+        });
+        return;
+      }
+      
       await updateDoc(agentRef, {
         status: 'deleted',
         deletedAt: new Date(),
@@ -423,7 +493,7 @@ export default function DeliveryManagementPage() {
       console.error('Error deleting agent:', error);
       showErrorAlert({
         title: "Error",
-        description: "Failed to delete agent."
+        description: `Failed to delete agent: ${error instanceof Error ? error.message : 'Unknown error'}`
       });
     }
   };
@@ -487,35 +557,22 @@ export default function DeliveryManagementPage() {
         <div className="flex gap-2">
           <Dialog open={onboardingDialogOpen} onOpenChange={setOnboardingDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" onClick={() => setOnboardingDialogOpen(true)}>
-                <FileText className="h-4 w-4 mr-2" />
-                Agent Onboarding
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Agent Onboarding Application</DialogTitle>
-              </DialogHeader>
-              <OnboardingDialog
-                form={onboardingForm}
-                setForm={setOnboardingForm}
-                onSubmit={submitOnboardingApplication}
-              />
-            </DialogContent>
-          </Dialog>
-          
-          <Dialog open={credentialDialogOpen} onOpenChange={setCredentialDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setCredentialDialogOpen(true)}>
+              <Button onClick={() => {
+                setAgentDialogActiveTab('onboarding');
+                setOnboardingDialogOpen(true);
+              }}>
                 <UserPlus className="h-4 w-4 mr-2" />
-                Add Agent
+                Add New Agent
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Create Agent Account</DialogTitle>
+                <DialogTitle>Agent Management</DialogTitle>
+                <DialogDescription>
+                  Create a new agent account with all required information and credentials
+                </DialogDescription>
               </DialogHeader>
-              <CreateAgentDialog
+              <UnifiedAgentForm
                 form={newAgentForm}
                 setForm={setNewAgentForm}
                 onGenerateCredentials={generateCredentials}
@@ -686,10 +743,13 @@ export default function DeliveryManagementPage() {
                         <Car className="h-4 w-4 text-muted-foreground" />
                         <div>
                           <div className="text-sm font-medium">
-                            {agent.vehicle.type.charAt(0).toUpperCase() + agent.vehicle.type.slice(1)}
+                            {agent.vehicle?.type 
+                              ? agent.vehicle.type.charAt(0).toUpperCase() + agent.vehicle.type.slice(1)
+                              : 'Not specified'
+                            }
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {agent.vehicle.number}
+                            {agent.vehicle?.number || 'N/A'}
                           </div>
                         </div>
                       </div>
@@ -725,6 +785,7 @@ export default function DeliveryManagementPage() {
                               agent={agent} 
                               orders={agentOrders}
                               onUpdateStatus={updateAgentStatus}
+                              onOpenFileViewer={openFileViewer}
                             />
                           </DialogContent>
                         </Dialog>
@@ -821,6 +882,16 @@ export default function DeliveryManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* File Viewer Dialog */}
+      {currentFile && (
+        <FileViewer
+          isOpen={fileViewerOpen}
+          onClose={() => setFileViewerOpen(false)}
+          fileUrl={currentFile.url}
+          filename={currentFile.name}
+        />
+      )}
     </div>
   );
 }
@@ -828,11 +899,13 @@ export default function DeliveryManagementPage() {
 function AgentDetailsDialog({ 
   agent, 
   orders, 
-  onUpdateStatus 
+  onUpdateStatus,
+  onOpenFileViewer
 }: { 
   agent: Agent; 
   orders: Order[];
   onUpdateStatus: (agentId: string, status: 'active' | 'suspended') => void;
+  onOpenFileViewer: (url: string, name: string, type?: string) => void;
 }) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-IN', {
@@ -1015,10 +1088,13 @@ function AgentDetailsDialog({
                       <CheckCircle className="h-4 w-4" />
                       <span className="text-sm">Uploaded</span>
                     </div>
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={agent.onboarding.idProofUrl} target="_blank" rel="noopener noreferrer">
-                        View Document
-                      </a>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => onOpenFileViewer(agent.onboarding.idProofUrl!, 'ID Proof', 'image/jpeg')}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Document
                     </Button>
                   </div>
                 ) : (
@@ -1037,10 +1113,13 @@ function AgentDetailsDialog({
                       <CheckCircle className="h-4 w-4" />
                       <span className="text-sm">Uploaded</span>
                     </div>
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={agent.onboarding.addressProofUrl} target="_blank" rel="noopener noreferrer">
-                        View Document
-                      </a>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => onOpenFileViewer(agent.onboarding.addressProofUrl!, 'Address Proof', 'image/jpeg')}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Document
                     </Button>
                   </div>
                 ) : (
@@ -1059,10 +1138,13 @@ function AgentDetailsDialog({
                       <CheckCircle className="h-4 w-4" />
                       <span className="text-sm">Uploaded</span>
                     </div>
-                    <Button size="sm" variant="outline" asChild>
-                      <a href={agent.onboarding.vehicleProofUrl} target="_blank" rel="noopener noreferrer">
-                        View Document
-                      </a>
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => onOpenFileViewer(agent.onboarding.vehicleProofUrl!, 'Vehicle Proof', 'image/jpeg')}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Document
                     </Button>
                   </div>
                 ) : (
@@ -1130,170 +1212,474 @@ function AgentDetailsDialog({
   );
 }
 
-function CreateAgentDialog({
+function UnifiedAgentDialog({
   form,
   setForm,
+  onboardingForm,
+  setOnboardingForm,
+  activeTab,
+  setActiveTab,
   onGenerateCredentials,
   onCreateAgent,
+  onSubmitOnboarding,
   onCopyToClipboard
 }: {
   form: any;
   setForm: (updater: (prev: any) => any) => void;
+  onboardingForm: any;
+  setOnboardingForm: (updater: (prev: any) => any) => void;
+  activeTab: 'quick' | 'onboarding';
+  setActiveTab: (tab: 'quick' | 'onboarding') => void;
   onGenerateCredentials: () => void;
   onCreateAgent: () => void;
+  onSubmitOnboarding: () => void;
   onCopyToClipboard: (text: string, label: string) => void;
 }) {
+  const handleFileChange = (field: string, file: File | null) => {
+    setOnboardingForm(prev => ({ ...prev, [field]: file }));
+  };
+
+  const getFilePreview = (file: File | null) => {
+    if (!file) return null;
+    return {
+      name: file.name,
+      size: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+      type: file.type
+    };
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="firstName">First Name *</Label>
-          <Input
-            id="firstName"
-            value={form.firstName}
-            onChange={(e) => setForm(prev => ({ ...prev, firstName: e.target.value }))}
-            placeholder="Enter first name"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="lastName">Last Name *</Label>
-          <Input
-            id="lastName"
-            value={form.lastName}
-            onChange={(e) => setForm(prev => ({ ...prev, lastName: e.target.value }))}
-            placeholder="Enter last name"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="phone">Phone Number *</Label>
-        <Input
-          id="phone"
-          value={form.phone}
-          onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
-          placeholder="Enter phone number"
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="email">Email (Optional)</Label>
-        <Input
-          id="email"
-          type="email"
-          value={form.email}
-          onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
-          placeholder="Enter email address"
-        />
-      </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="vehicleType">Vehicle Type</Label>
-          <select
-            id="vehicleType"
-            value={form.vehicleType}
-            onChange={(e) => setForm(prev => ({ ...prev, vehicleType: e.target.value }))}
-            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+    <div className="space-y-6">
+      {/* Tab Navigation */}
+      <div className="border-b">
+        <nav className="flex space-x-8">
+          <button
+            onClick={() => setActiveTab('quick')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'quick'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
           >
-            <option value="bike">Bike</option>
-            <option value="car">Car</option>
-            <option value="van">Van</option>
-          </select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="vehicleNumber">Vehicle Number</Label>
-          <Input
-            id="vehicleNumber"
-            value={form.vehicleNumber}
-            onChange={(e) => setForm(prev => ({ ...prev, vehicleNumber: e.target.value }))}
-            placeholder="Enter vehicle number"
-          />
-        </div>
+            <UserPlus className="h-4 w-4 inline mr-2" />
+            Quick Create
+          </button>
+          <button
+            onClick={() => setActiveTab('onboarding')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'onboarding'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            <FileText className="h-4 w-4 inline mr-2" />
+            Full Onboarding
+          </button>
+        </nav>
       </div>
 
-      <div className="border-t pt-4">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="font-medium">Login Credentials</h4>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={onGenerateCredentials}
-          >
-            <Key className="h-4 w-4 mr-2" />
-            Generate
-          </Button>
-        </div>
-
-        <div className="space-y-3">
-          <div className="space-y-2">
-            <Label htmlFor="agentId">Agent ID</Label>
-            <div className="flex gap-2">
+      {/* Quick Create Tab */}
+      {activeTab === 'quick' && (
+        <div className="space-y-4">
+          <div className="text-sm text-gray-600 mb-4">
+            Create an agent account directly with login credentials for immediate access.
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name *</Label>
               <Input
-                id="agentId"
-                value={form.agentId}
-                readOnly
-                placeholder="Click Generate to create ID"
-                className="bg-muted"
+                id="firstName"
+                value={form.firstName}
+                onChange={(e) => setForm(prev => ({ ...prev, firstName: e.target.value }))}
+                placeholder="Enter first name"
               />
-              {form.agentId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onCopyToClipboard(form.agentId, 'Agent ID')}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              )}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name *</Label>
+              <Input
+                id="lastName"
+                value={form.lastName}
+                onChange={(e) => setForm(prev => ({ ...prev, lastName: e.target.value }))}
+                placeholder="Enter last name"
+              />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="flex gap-2">
+            <Label htmlFor="phone">Phone Number *</Label>
+            <Input
+              id="phone"
+              value={form.phone}
+              onChange={(e) => setForm(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="Enter phone number"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email (Optional)</Label>
+            <Input
+              id="email"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="Enter email address"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="vehicleType">Vehicle Type</Label>
+              <select
+                id="vehicleType"
+                value={form.vehicleType}
+                onChange={(e) => setForm(prev => ({ ...prev, vehicleType: e.target.value }))}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="bike">Bike</option>
+                <option value="car">Car</option>
+                <option value="van">Van</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vehicleNumber">Vehicle Number</Label>
               <Input
-                id="password"
-                value={form.password}
-                readOnly
-                placeholder="Click Generate to create password"
-                className="bg-muted"
+                id="vehicleNumber"
+                value={form.vehicleNumber}
+                onChange={(e) => setForm(prev => ({ ...prev, vehicleNumber: e.target.value }))}
+                placeholder="Enter vehicle number"
               />
-              {form.password && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onCopyToClipboard(form.password, 'Password')}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              )}
+            </div>
+          </div>
+
+          <div className="border-t pt-4">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-medium">Login Credentials</h4>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onGenerateCredentials}
+              >
+                <Key className="h-4 w-4 mr-2" />
+                Generate
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="agentId">Agent ID</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="agentId"
+                    value={form.agentId}
+                    readOnly
+                    placeholder="Click Generate to create ID"
+                    className="bg-muted"
+                  />
+                  {form.agentId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onCopyToClipboard(form.agentId, 'Agent ID')}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="password"
+                    value={form.password}
+                    readOnly
+                    placeholder="Click Generate to create password"
+                    className="bg-muted"
+                  />
+                  {form.password && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onCopyToClipboard(form.password, 'Password')}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {form.agentId && form.password && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>Important:</strong> Share these credentials with the agent securely. They will use these to log in to the agent portal.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                onClick={onCreateAgent}
+                disabled={!form.firstName || !form.lastName || !form.phone || !form.agentId || !form.password}
+              >
+                Create Agent Account
+              </Button>
             </div>
           </div>
         </div>
+      )}
 
-        {form.agentId && form.password && (
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-sm text-blue-800">
-              <strong>Important:</strong> Share these credentials with the agent securely. They will use these to log in to the agent portal.
-            </p>
+      {/* Full Onboarding Tab */}
+      {activeTab === 'onboarding' && (
+        <div className="space-y-6">
+          <div className="text-sm text-gray-600 mb-4">
+            Submit a complete onboarding application with document verification for review.
           </div>
-        )}
-      </div>
 
-      <div className="flex justify-end gap-2 pt-4">
-        <Button
-          onClick={onCreateAgent}
-          disabled={!form.firstName || !form.lastName || !form.phone || !form.agentId || !form.password}
-        >
-          Create Agent Account
-        </Button>
-      </div>
+          {/* Personal Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Personal Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="onb-firstName">First Name *</Label>
+                <Input
+                  id="onb-firstName"
+                  value={onboardingForm.firstName}
+                  onChange={(e) => setOnboardingForm(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="onb-lastName">Last Name *</Label>
+                <Input
+                  id="onb-lastName"
+                  value={onboardingForm.lastName}
+                  onChange={(e) => setOnboardingForm(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Enter last name"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="onb-phone">Phone Number *</Label>
+              <Input
+                id="onb-phone"
+                value={onboardingForm.phone}
+                onChange={(e) => setOnboardingForm(prev => ({ ...prev, phone: e.target.value }))}
+                placeholder="Enter phone number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="onb-email">Email (Optional)</Label>
+              <Input
+                id="onb-email"
+                type="email"
+                value={onboardingForm.email}
+                onChange={(e) => setOnboardingForm(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="Enter email address"
+              />
+            </div>
+          </div>
+
+          {/* Vehicle Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Vehicle Information</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="onb-vehicleType">Vehicle Type</Label>
+                <select
+                  id="onb-vehicleType"
+                  value={onboardingForm.vehicleType}
+                  onChange={(e) => setOnboardingForm(prev => ({ ...prev, vehicleType: e.target.value }))}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="bike">Bike</option>
+                  <option value="car">Car</option>
+                  <option value="van">Van</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="onb-vehicleNumber">Vehicle Number</Label>
+                <Input
+                  id="onb-vehicleNumber"
+                  value={onboardingForm.vehicleNumber}
+                  onChange={(e) => setOnboardingForm(prev => ({ ...prev, vehicleNumber: e.target.value }))}
+                  placeholder="Enter vehicle number"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Document Upload */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Document Upload</h3>
+            
+            {/* ID Proof */}
+            <div className="space-y-2">
+              <Label htmlFor="idProof">ID Proof * (Aadhar Card, PAN Card, Driving License)</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <div className="flex flex-col items-center space-y-2">
+                  <Upload className="h-8 w-8 text-gray-400" />
+                  <div className="text-center">
+                    <Input
+                      id="idProof"
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => handleFileChange('idProofFile', e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                    <Label 
+                      htmlFor="idProof" 
+                      className="cursor-pointer text-blue-600 hover:text-blue-500"
+                    >
+                      Click to upload ID Proof
+                    </Label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      PNG, JPG, PDF up to 10MB
+                    </p>
+                  </div>
+                </div>
+                {onboardingForm.idProofFile && (
+                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded flex items-center gap-2">
+                    <FileCheck className="h-4 w-4 text-green-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{getFilePreview(onboardingForm.idProofFile)?.name}</p>
+                      <p className="text-xs text-gray-500">{getFilePreview(onboardingForm.idProofFile)?.size}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleFileChange('idProofFile', null)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Address Proof */}
+            <div className="space-y-2">
+              <Label htmlFor="addressProof">Address Proof * (Utility Bill, Bank Statement, Rent Agreement)</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <div className="flex flex-col items-center space-y-2">
+                  <Upload className="h-8 w-8 text-gray-400" />
+                  <div className="text-center">
+                    <Input
+                      id="addressProof"
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => handleFileChange('addressProofFile', e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                    <Label 
+                      htmlFor="addressProof" 
+                      className="cursor-pointer text-blue-600 hover:text-blue-500"
+                    >
+                      Click to upload Address Proof
+                    </Label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      PNG, JPG, PDF up to 10MB
+                    </p>
+                  </div>
+                </div>
+                {onboardingForm.addressProofFile && (
+                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded flex items-center gap-2">
+                    <FileCheck className="h-4 w-4 text-green-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{getFilePreview(onboardingForm.addressProofFile)?.name}</p>
+                      <p className="text-xs text-gray-500">{getFilePreview(onboardingForm.addressProofFile)?.size}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleFileChange('addressProofFile', null)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Vehicle Proof */}
+            <div className="space-y-2">
+              <Label htmlFor="vehicleProof">Vehicle Proof (RC Book, Insurance - Optional)</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+                <div className="flex flex-col items-center space-y-2">
+                  <Upload className="h-8 w-8 text-gray-400" />
+                  <div className="text-center">
+                    <Input
+                      id="vehicleProof"
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => handleFileChange('vehicleProofFile', e.target.files?.[0] || null)}
+                      className="hidden"
+                    />
+                    <Label 
+                      htmlFor="vehicleProof" 
+                      className="cursor-pointer text-blue-600 hover:text-blue-500"
+                    >
+                      Click to upload Vehicle Proof
+                    </Label>
+                    <p className="text-xs text-gray-500 mt-1">
+                      PNG, JPG, PDF up to 10MB
+                    </p>
+                  </div>
+                </div>
+                {onboardingForm.vehicleProofFile && (
+                  <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded flex items-center gap-2">
+                    <FileCheck className="h-4 w-4 text-green-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{getFilePreview(onboardingForm.vehicleProofFile)?.name}</p>
+                      <p className="text-xs text-gray-500">{getFilePreview(onboardingForm.vehicleProofFile)?.size}</p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleFileChange('vehicleProofFile', null)}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Additional Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Additional Notes (Optional)</Label>
+              <textarea
+                id="notes"
+                value={onboardingForm.notes}
+                onChange={(e) => setOnboardingForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Any additional information or special requirements..."
+                rows={3}
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 mt-6">
+            <Button
+              onClick={onSubmitOnboarding}
+              disabled={!onboardingForm.firstName || !onboardingForm.lastName || !onboardingForm.phone || !onboardingForm.idProofFile || !onboardingForm.addressProofFile}
+            >
+              Submit Application
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
 
 function OnboardingDialog({
   form,
@@ -1559,7 +1945,7 @@ function OnboardingDialog({
         <p className="font-medium mb-1">Note:</p>
         <ul className="list-disc list-inside space-y-1 text-xs">
           <li>All uploaded documents will be reviewed by admin</li>
-          <li>Agent status will be set to "Pending" until verification is complete</li>
+          <li>Agent status will be set to &quot;Pending&quot; until verification is complete</li>
           <li>ID Proof and Address Proof are mandatory for onboarding</li>
           <li>Vehicle Proof is optional but recommended</li>
         </ul>

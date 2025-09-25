@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,7 @@ import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
 import { doc, getDoc, addDoc, collection, serverTimestamp, getDocs, QueryDocumentSnapshot } from 'firebase/firestore';
 import type { OrderItem, PrintFile, FileGroup, UserData, Order } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { UploadProgress } from '@/components/ui/upload-progress';
 
 interface PriceSummaryProps {
   files: PrintFile[];
@@ -52,6 +53,13 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
   const [isPlacingOrder, setIsPlacingOrder] = React.useState(false);
   const [shippingFee, setShippingFee] = React.useState(0);
   const [shippingLoading, setShippingLoading] = React.useState(true);
+  
+  // Upload progress state
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [uploadProgress, setUploadProgress] = React.useState(0);
+  const [uploadSpeed, setUploadSpeed] = React.useState<number>(0);
+  const [timeRemaining, setTimeRemaining] = React.useState<number>(0);
+  const [uploadStartTime, setUploadStartTime] = React.useState<number>(0);
   const [settings, setSettings] = React.useState<any>({});
 
   React.useEffect(() => {
@@ -155,7 +163,9 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
     const userDoc = await getDoc(userDocRef);
     const userData = userDoc.exists() ? userDoc.data() as UserData : {} as UserData;
 
-    const [firstName, lastName] = (user.displayName || 'N/A').split(' ');
+    const nameParts = (user.displayName || 'N/A').split(' ');
+    const firstName = nameParts[0] || 'N/A';
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'N/A';
 
     const orderData: Omit<Order, 'id'> = {
         userId: user.uid,
@@ -174,14 +184,18 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
         createdAt: serverTimestamp(),
         paymentMethod: paymentMethod as 'online' | 'cod',
         isUrgent,
-        shippingFee: shippingFee, // Add shipping fee to order data
         paymentDetails: {
             ...razorpayData,
             status: razorpayData.razorpay_payment_id ? 'Paid' : 'Pending'
         },
         totals: { subtotal: totalCost, shipping: shippingFee, tax: 0, total: finalTotal },
         delivery: { type: 'own' },
-        timeline: [{ action: 'Order Placed', actor: 'customer', ts: serverTimestamp() }],
+        payment: {
+          method: paymentMethod === 'online' ? 'Prepaid' : 'COD',
+          status: razorpayData.razorpay_payment_id ? 'Paid' : 'Pending'
+        },
+        urgent: isUrgent,
+        timeline: [{ action: 'Order Placed', actor: 'customer', ts: new Date() }],
         orderId: '',
     };
     
@@ -197,17 +211,88 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
     allPrintFiles.forEach((printFile) => {
       formData.append('files', printFile.file);
     });
+    // Add group name for the API
+    formData.append('groupName', 'Customer Upload');
 
     try {
-      const response = await fetch(`/api/orders/${orderId}/files`, {
-        method: 'POST',
-        body: formData,
-      });
+      setIsUploading(true);
+      setUploadProgress(0);
+      setUploadStartTime(Date.now());
+      
+      // Create XMLHttpRequest for progress tracking
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        
+        // Track upload progress
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable) {
+            const progress = (event.loaded / event.total) * 100;
+            setUploadProgress(progress);
+            
+            // Calculate upload speed and time remaining
+            const elapsedTime = (Date.now() - uploadStartTime) / 1000;
+            if (elapsedTime > 1) { // Only calculate after 1 second
+              const uploadSpeed = event.loaded / elapsedTime; // bytes per second
+              const remainingBytes = event.total - event.loaded;
+              const timeRemaining = remainingBytes / uploadSpeed;
+              
+              setUploadSpeed(uploadSpeed);
+              setTimeRemaining(timeRemaining);
+            }
+          }
+        });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to upload files');
-      }
+        // Handle completion
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            setUploadProgress(100);
+            resolve();
+          } else {
+            // Log response details for debugging
+            console.error('Upload failed with status:', xhr.status);
+            console.error('Response text:', xhr.responseText);
+            
+            let errorMessage = `Upload failed (${xhr.status})`;
+            let detailsMessage = '';
+            
+            try {
+              const response = JSON.parse(xhr.responseText);
+              if (response.error) {
+                errorMessage += `: ${response.error}`;
+              }
+              if (response.details) {
+                console.error('Error details:', response.details);
+                detailsMessage = response.details;
+              }
+            } catch (e) {
+              // Response is not JSON, use status text or response text
+              if (xhr.responseText) {
+                detailsMessage = xhr.responseText;
+              } else if (xhr.statusText) {
+                errorMessage += `: ${xhr.statusText}`;
+              }
+            }
+            
+            // Create a detailed error for debugging
+            const fullError = detailsMessage ? `${errorMessage}\nDetails: ${detailsMessage}` : errorMessage;
+            reject(new Error(fullError));
+          }
+        });
+
+        // Handle errors
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error occurred'));
+        });
+
+        xhr.addEventListener('timeout', () => {
+          reject(new Error('Upload timeout'));
+        });
+
+        // Start the upload
+        xhr.open('POST', `/api/orders/${orderId}/files`);
+        xhr.timeout = 5 * 60 * 1000; // 5 minutes timeout
+        xhr.send(formData);
+      });
     } catch (error: any) {
       console.error('Error uploading files:', error);
       toast({
@@ -215,6 +300,11 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
         description: 'Your order was created, but we failed to upload your files. Please contact support.',
         variant: 'destructive',
       });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      setUploadSpeed(0);
+      setTimeRemaining(0);
     }
   };
 
@@ -403,13 +493,28 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
             </RadioGroup>
         </div>
         
+        {/* Upload Progress Display */}
+        {isUploading && (
+          <div className="space-y-2">
+            <UploadProgress
+              fileName={`${[...files, ...groups.flatMap(g => g.files)].length} file${[...files, ...groups.flatMap(g => g.files)].length === 1 ? '' : 's'}`}
+              progress={uploadProgress}
+              isUploading={isUploading}
+              uploadSpeed={uploadSpeed}
+              timeRemaining={timeRemaining}
+              size={[...files, ...groups.flatMap(g => g.files)].reduce((sum, f) => sum + f.file.size, 0)}
+              className="border-0 shadow-none bg-muted/50"
+            />
+          </div>
+        )}
+        
         <Separator />
         <div className="flex items-center justify-between font-bold text-lg">
           <span>Total</span>
           <span className='flex items-center'><IndianRupee className="h-5 w-5"/>{finalTotal.toFixed(2)}</span>
         </div>
-        <Button size="lg" className="w-full" onClick={handlePlaceOrder} disabled={isPlacingOrder || userLoading || shippingLoading}>
-          {isPlacingOrder ? <Loader className="animate-spin" /> : getButtonText()}
+        <Button size="lg" className="w-full" onClick={handlePlaceOrder} disabled={isPlacingOrder || userLoading || shippingLoading || isUploading}>
+          {isPlacingOrder ? <Loader className="animate-spin" /> : isUploading ? "Uploading Files..." : getButtonText()}
         </Button>
       </CardContent>
     </Card>

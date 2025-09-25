@@ -1,7 +1,7 @@
 // src/app/admin/customers/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,79 +9,91 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ArrowRight, Users, UserCheck, Search, Award, Repeat, MoreHorizontal, Trash2, UserX } from "lucide-react";
+import { ArrowRight, Users, UserCheck, Search, Award, Repeat, MoreHorizontal, Trash2, UserX, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { useCustomerData, type Customer } from '@/hooks/use-customer-data';
 
-
-type CustomerStatus = 'Active' | 'Inactive';
-type Customer = {
-    id: string;
-    name: string;
-    email: string;
-    totalOrders: number;
-    status: CustomerStatus;
-    lastSeen: string;
-};
-
-const initialCustomers: Customer[] = [
-    { id: 'CUST001', name: 'John Doe', email: 'john.doe@example.com', totalOrders: 5, status: 'Active', lastSeen: '2 hours ago' },
-    { id: 'CUST002', name: 'Alice', email: 'alice@example.com', totalOrders: 2, status: 'Active', lastSeen: '1 day ago' },
-    { id: 'CUST003', name: 'Bob', email: 'bob@example.com', totalOrders: 8, status: 'Inactive', lastSeen: '3 days ago' },
-    { id: 'CUST004', name: 'Charlie', email: 'charlie@example.com', totalOrders: 1, status: 'Active', lastSeen: '5 hours ago' },
-    { id: 'CUST005', name: 'Diana', email: 'diana@example.com', totalOrders: 0, status: 'Inactive', lastSeen: '1 week ago' },
-];
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = React.useState<Customer[]>(initialCustomers);
   const [activeTab, setActiveTab] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const [customerToDelete, setCustomerToDelete] = React.useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
+  const [isFreshLoad, setIsFreshLoad] = React.useState(true);
   const { toast } = useToast();
-
-  const filteredCustomers = React.useMemo(() => {
-    let filtered = customers;
-    
-    if (activeTab !== 'all') {
-        filtered = filtered.filter(customer => customer.status.toLowerCase() === activeTab);
-    }
-
-    if(searchQuery){
-        filtered = filtered.filter(customer => 
-            customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            customer.email.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-    }
-    return filtered;
-  }, [activeTab, searchQuery, customers]);
   
-  const topCustomer = React.useMemo(() => {
-      if (customers.length === 0) return null;
-      return customers.reduce((prev, current) => (prev.totalOrders > current.totalOrders) ? prev : current)
-  }, [customers]);
+  // Use the dynamic customer data hook
+  const { 
+    analytics, 
+    customers, 
+    loading, 
+    error, 
+    showFallback, 
+    refetch 
+  } = useCustomerData();
 
-  const repeatCustomers = React.useMemo(() => {
-      return customers.filter(c => c.totalOrders > 1).length;
-  }, [customers]);
+  // Load data on component mount and manual refresh only
+  React.useEffect(() => {
+    let isMounted = true;
+    
+    // Initial load when component mounts (e.g., opening new tab or page refresh)
+    const initialLoad = async () => {
+      if (isMounted) {
+        setIsFreshLoad(true);
+        await refetch(searchQuery, activeTab);
+        if (isMounted) {
+          setLastUpdated(new Date());
+          setIsFreshLoad(false);
+        }
+      }
+    };
+    
+    // Start with immediate load only
+    initialLoad();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Only run once on mount
 
-  const getStatusVariant = (status: CustomerStatus) => {
+  // Manual refresh function
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refetch(searchQuery, activeTab);
+      setLastUpdated(new Date());
+      toast({
+        title: "Data refreshed",
+        description: "Customer data has been updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Refresh failed",
+        description: "Failed to refresh customer data. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Remove all automatic data fetching - no search/tab change updates
+
+  const getStatusVariant = (status: Customer['status']) => {
     return status === 'Active' ? 'secondary' : 'outline';
   }
 
   const handleToggleBlockUser = (customerId: string) => {
-      setCustomers(prev => prev.map(c => {
-          if (c.id === customerId) {
-              const newStatus = c.status === 'Active' ? 'Inactive' : 'Active';
-              toast({ 
-                  title: `User ${newStatus === 'Active' ? 'Unblocked' : 'Blocked'}`, 
-                  description: `The customer's status has been set to ${newStatus}.` 
-              });
-              return {...c, status: newStatus};
-          }
-          return c;
-      }));
+      // Note: This would need a server endpoint to actually update customer status
+      toast({ 
+          title: "Feature Not Implemented", 
+          description: "Customer blocking functionality needs to be implemented on the server.",
+          variant: "destructive"
+      });
   }
 
   const handleDeleteUser = (customerId: string) => {
@@ -90,17 +102,85 @@ export default function CustomersPage() {
   }
 
   const confirmDelete = () => {
-    if (customerToDelete) {
-        setCustomers(prev => prev.filter(c => c.id !== customerToDelete));
-        toast({ title: "User Deleted", description: "The customer has been removed.", variant: "destructive" });
-    }
+    // Note: This would need a server endpoint to actually delete customers
+    toast({ 
+      title: "Feature Not Implemented", 
+      description: "Customer deletion functionality needs to be implemented on the server.",
+      variant: "destructive"
+    });
     setIsAlertOpen(false);
     setCustomerToDelete(null);
   }
 
+  if (error && !showFallback) {
+    return (
+      <div className="flex flex-col gap-8">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-bold">Customers</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Error loading data - please try refreshing
+            </p>
+          </div>
+          <Button 
+            onClick={handleManualRefresh} 
+            variant="outline"
+            disabled={isRefreshing}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Retrying...' : 'Retry'}
+          </Button>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center text-muted-foreground">
+              <p>Error loading customer data: {error}</p>
+              <Button onClick={handleManualRefresh} disabled={isRefreshing} className="mt-4">
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing ? 'Retrying...' : 'Try Again'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
-        <h1 className="text-3xl font-bold">Customers</h1>
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <h1 className="text-3xl font-bold">Customers</h1>
+            {lastUpdated && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Last updated: {lastUpdated.toLocaleTimeString()}
+                {isFreshLoad && (
+                  <span className="ml-2 inline-flex items-center gap-1 text-blue-600">
+                    <RefreshCw className="h-3 w-3 animate-spin" />
+                    Loading fresh data...
+                  </span>
+                )}
+              </p>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {showFallback && (
+              <div className="text-sm text-muted-foreground bg-yellow-50 px-3 py-1 rounded-md">
+                Using demo data - Firebase not configured
+              </div>
+            )}
+            <Button 
+              onClick={handleManualRefresh} 
+              variant="outline"
+              disabled={isRefreshing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          </div>
+        </div>
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -109,8 +189,16 @@ export default function CustomersPage() {
                     <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{customers.length}</div>
-                    <p className="text-xs text-muted-foreground">All registered users</p>
+                    <div className="text-2xl font-bold">
+                      {loading ? (
+                        <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                      ) : (
+                        analytics?.totalCustomers.count || 0
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {analytics?.totalCustomers.description || 'All registered users'}
+                    </p>
                 </CardContent>
             </Card>
              <Card>
@@ -119,8 +207,16 @@ export default function CustomersPage() {
                     <UserCheck className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{customers.filter(c => c.status === 'Active').length}</div>
-                    <p className="text-xs text-muted-foreground">Users active in the last 30 days</p>
+                    <div className="text-2xl font-bold">
+                      {loading ? (
+                        <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                      ) : (
+                        analytics?.activeCustomers.count || 0
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {analytics?.activeCustomers.description || 'Users active in the last 30 days'}
+                    </p>
                 </CardContent>
             </Card>
             <Card>
@@ -129,8 +225,16 @@ export default function CustomersPage() {
                     <Award className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{topCustomer?.name || 'N/A'}</div>
-                    <p className="text-xs text-muted-foreground">{topCustomer ? `${topCustomer.totalOrders} total orders` : ''}</p>
+                    <div className="text-2xl font-bold">
+                      {loading ? (
+                        <div className="h-8 w-24 bg-muted animate-pulse rounded"></div>
+                      ) : (
+                        analytics?.topCustomer?.name || 'N/A'
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {analytics?.topCustomer?.description || '0 total orders'}
+                    </p>
                 </CardContent>
             </Card>
             <Card>
@@ -139,8 +243,16 @@ export default function CustomersPage() {
                     <Repeat className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold">{repeatCustomers}</div>
-                    <p className="text-xs text-muted-foreground">Customers with more than one order</p>
+                    <div className="text-2xl font-bold">
+                      {loading ? (
+                        <div className="h-8 w-16 bg-muted animate-pulse rounded"></div>
+                      ) : (
+                        analytics?.repeatCustomers.count || 0
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {analytics?.repeatCustomers.description || 'Customers with more than one order'}
+                    </p>
                 </CardContent>
             </Card>
         </div>
@@ -169,13 +281,31 @@ export default function CustomersPage() {
                 </CardHeader>
                 <CardContent>
                     <TabsContent value="all">
-                        <CustomerTable customers={filteredCustomers} getStatusVariant={getStatusVariant} onToggleBlock={handleToggleBlockUser} onDelete={handleDeleteUser}/>
+                        <CustomerTable 
+                          customers={customers} 
+                          loading={loading}
+                          getStatusVariant={getStatusVariant} 
+                          onToggleBlock={handleToggleBlockUser} 
+                          onDelete={handleDeleteUser}
+                        />
                     </TabsContent>
                     <TabsContent value="active">
-                         <CustomerTable customers={filteredCustomers} getStatusVariant={getStatusVariant} onToggleBlock={handleToggleBlockUser} onDelete={handleDeleteUser}/>
+                         <CustomerTable 
+                           customers={customers} 
+                           loading={loading}
+                           getStatusVariant={getStatusVariant} 
+                           onToggleBlock={handleToggleBlockUser} 
+                           onDelete={handleDeleteUser}
+                         />
                     </TabsContent>
                     <TabsContent value="inactive">
-                         <CustomerTable customers={filteredCustomers} getStatusVariant={getStatusVariant} onToggleBlock={handleToggleBlockUser} onDelete={handleDeleteUser}/>
+                         <CustomerTable 
+                           customers={customers} 
+                           loading={loading}
+                           getStatusVariant={getStatusVariant} 
+                           onToggleBlock={handleToggleBlockUser} 
+                           onDelete={handleDeleteUser}
+                         />
                     </TabsContent>
                 </CardContent>
             </Card>
@@ -190,76 +320,106 @@ export default function CustomersPage() {
                 </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                <AlertDialogCancel onClick={() => setCustomerToDelete(null)}>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete}>Continue</AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
     </div>
-  )
+  );
 }
 
 interface CustomerTableProps {
-    customers: Customer[], 
-    getStatusVariant: (status: CustomerStatus) => "secondary" | "outline",
-    onToggleBlock: (id: string) => void,
-    onDelete: (id: string) => void
+    customers: Customer[];
+    loading: boolean;
+    getStatusVariant: (status: Customer['status']) => "outline" | "secondary";
+    onToggleBlock: (customerId: string) => void;
+    onDelete: (customerId: string) => void;
 }
 
-function CustomerTable({ customers, getStatusVariant, onToggleBlock, onDelete }: CustomerTableProps) {
+function CustomerTable({ customers, loading, getStatusVariant, onToggleBlock, onDelete }: CustomerTableProps) {
+    if (loading) {
+      return (
+        <div className="text-center py-8">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto text-muted-foreground mb-2" />
+          <p className="text-muted-foreground">Loading customers...</p>
+        </div>
+      );
+    }
+
+    if (customers.length === 0) {
+      return (
+        <div className="text-center py-8">
+          <Users className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+          <p className="text-muted-foreground">No customers found</p>
+        </div>
+      );
+    }
+
     return (
-         <Table>
+        <Table>
             <TableHeader>
                 <TableRow>
                     <TableHead>Customer ID</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Orders</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Total Orders</TableHead>
                     <TableHead>Last Seen</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {customers.map(customer => (
-                     <TableRow key={customer.id}>
-                        <TableCell className="font-medium">{customer.id}</TableCell>
+                {customers.map((customer) => (
+                    <TableRow key={customer.id}>
+                        <TableCell className="font-medium">
+                            <Link href={`/admin/customers/${customer.id}`} className="hover:underline">
+                                {customer.id}
+                            </Link>
+                        </TableCell>
                         <TableCell>{customer.name}</TableCell>
                         <TableCell>{customer.email}</TableCell>
-                        <TableCell><Badge variant={getStatusVariant(customer.status)}>{customer.status}</Badge></TableCell>
+                        <TableCell>{customer.phone}</TableCell>
                         <TableCell>{customer.totalOrders}</TableCell>
+                        <TableCell>
+                            <Badge variant={getStatusVariant(customer.status)}>
+                                {customer.status}
+                            </Badge>
+                        </TableCell>
                         <TableCell>{customer.lastSeen}</TableCell>
                         <TableCell className="text-right">
-                           <DropdownMenu>
+                            <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                        <MoreHorizontal className="h-4 w-4"/>
-                                        <span className="sr-only">Actions</span>
+                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                        <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
                                     <DropdownMenuItem asChild>
                                         <Link href={`/admin/customers/${customer.id}`}>
-                                            <ArrowRight className="mr-2 h-4 w-4"/>
                                             View Details
                                         </Link>
                                     </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={() => onToggleBlock(customer.id)}>
-                                        {customer.status === 'Active' ? <UserX className="mr-2 h-4 w-4" /> : <UserCheck className="mr-2 h-4 w-4" />}
+                                        <UserX className="h-4 w-4 mr-2" />
                                         {customer.status === 'Active' ? 'Block User' : 'Unblock User'}
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => onDelete(customer.id)} className="text-destructive">
-                                        <Trash2 className="mr-2 h-4 w-4"/>
-                                        Delete User
+                                    <DropdownMenuItem 
+                                        onClick={() => onDelete(customer.id)}
+                                        className="text-destructive"
+                                    >
+                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        Delete
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
-                           </DropdownMenu>
+                            </DropdownMenu>
                         </TableCell>
                     </TableRow>
                 ))}
             </TableBody>
         </Table>
-    )
+    );
 }

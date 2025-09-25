@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IndianRupee, ArrowLeft, Download, Eye, Truck, Loader } from "lucide-react";
+import { IndianRupee, ArrowLeft, Download, Eye, Truck, Loader, FileText } from "lucide-react";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from '@/hooks/use-toast';
@@ -117,7 +117,15 @@ export default function OrderDetailsPage({ params }: { params: { orderId: string
                 </Link>
             </Button>
             <h1 className="text-3xl font-bold">Order Details</h1>
-             <Badge variant={getStatusVariant(order.status) as any} className="ml-auto text-base">{order.status}</Badge>
+             <Badge variant={getStatusVariant(order.status) as any} className="text-base">{order.status}</Badge>
+             <div className="ml-auto flex gap-2">
+                <Button variant="outline" asChild>
+                    <Link href={`/admin/orders/${params.orderId}/invoice`}>
+                        <FileText className="mr-2 h-4 w-4"/>
+                        View Invoice
+                    </Link>
+                </Button>
+            </div>
         </div>
        
         <div className="grid gap-8 md:grid-cols-3">

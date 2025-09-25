@@ -10,31 +10,101 @@ export class OrderManagementService {
     this.pushService = new PushNotificationService();
   }
 
-  // Create new order
+  // Create new order with comprehensive validation
   async createOrder(orderData: any): Promise<any> {
     try {
+      // Validate required fields
+      if (!orderData.customer || !orderData.items || !orderData.totals) {
+        throw new Error('Missing required order data: customer, items, and totals are required');
+      }
+
       const orderId = this.generateOrderId();
       
+      // Ensure proper data structure
+      const currentTimestamp = new Date();
       const order = {
-        orderId,
+        id: orderId,
+        orderId: orderId,
         ...orderData,
         status: 'Pending',
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        timeline: [
+          {
+            ts: currentTimestamp,
+            actor: 'system',
+            action: 'Order created',
+            note: 'Order submitted successfully'
+          }
+        ],
+        // Ensure proper payment structure
+        payment: {
+          method: orderData.payment?.method || 'COD',
+          status: 'Pending',
+          ...orderData.payment
+        },
+        // Ensure proper delivery structure
+        delivery: {
+          type: orderData.delivery?.type || 'own',
+          ...orderData.delivery
+        },
+        // Processing flags
+        processing: {
+          aiAnalysisComplete: false,
+          filesProcessed: false,
+          readyForPrint: false
+        }
       };
 
+      // Save order to Firestore
       await this.db.collection('orders').doc(orderId).set(order);
       
+      // Create order summary for notifications
+      const orderSummary = {
+        orderId,
+        customerName: `${order.customer.first_name} ${order.customer.last_name}`,
+        itemCount: order.items.length,
+        total: order.totals.total,
+        paymentMethod: order.payment.method
+      };
+      
       // Send confirmation notification
-      await this.pushService.sendOrderConfirmation(order);
+      try {
+        await this.pushService.sendOrderConfirmation(orderSummary);
+      } catch (notificationError) {
+        console.error('Order confirmation notification failed:', notificationError);
+        // Don't fail order creation for notification errors
+      }
       
-      // Auto-assign if criteria met
-      await this.autoAssignOrder(orderId);
+      // Auto-assign if criteria are met
+      try {
+        await this.autoAssignOrder(orderId);
+      } catch (assignmentError) {
+        console.error('Auto-assignment failed:', assignmentError);
+        // Continue without failing order creation
+      }
       
-      return { success: true, orderId, order };
-    } catch (error) {
+      return { 
+        success: true, 
+        orderId, 
+        order: {
+          ...order,
+          // Return formatted timestamps for frontend
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      };
+      
+    } catch (error: any) {
       console.error('Error creating order:', error);
-      throw error;
+      
+      // Log error for debugging
+      await this.logOrderError('order_creation_failed', {
+        orderData,
+        error: error.message
+      });
+      
+      throw new Error(`Order creation failed: ${error.message}`);
     }
   }
 
@@ -50,10 +120,11 @@ export class OrderManagementService {
         updateData.statusNotes = notes;
       }
 
-      // Add status history
+      // Add status history with regular timestamp
+      const currentTimestamp = new Date();
       updateData[`statusHistory.${Date.now()}`] = {
         status,
-        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        timestamp: currentTimestamp,
         notes
       };
 
@@ -433,6 +504,15 @@ export class OrderManagementService {
 
   // Update agent performance
   private async updateAgentPerformance(agentId: string, action: string): Promise<void> {
+    if (!agentId) return;
+
+    // Check if agent exists first
+    const agentDoc = await this.db.collection('agents').doc(agentId).get();
+    if (!agentDoc.exists) {
+      console.warn(`Agent ${agentId} does not exist, skipping performance update`);
+      return;
+    }
+
     const updates: any = {};
     
     switch (action) {
@@ -451,6 +531,15 @@ export class OrderManagementService {
 
   // Release agent from current assignment
   private async releaseAgent(agentId: string): Promise<void> {
+    if (!agentId) return;
+
+    // Check if agent exists first
+    const agentDoc = await this.db.collection('agents').doc(agentId).get();
+    if (!agentDoc.exists) {
+      console.warn(`Agent ${agentId} does not exist, skipping release`);
+      return;
+    }
+
     await this.db.collection('agents').doc(agentId).update({
       status: 'available',
       current_order_id: admin.firestore.FieldValue.delete(),
@@ -468,5 +557,19 @@ export class OrderManagementService {
   private async sendFeedbackRequest(orderId: string, order: any): Promise<void> {
     // Implement feedback request logic
     console.log(`Sending feedback request for order ${orderId}`);
+  }
+
+  // Log order errors for debugging
+  private async logOrderError(errorType: string, details: any): Promise<void> {
+    try {
+      await this.db.collection('order_errors').add({
+        error_type: errorType,
+        details,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        environment: process.env.NODE_ENV || 'development'
+      });
+    } catch (loggingError) {
+      console.error('Failed to log order error:', loggingError);
+    }
   }
 }

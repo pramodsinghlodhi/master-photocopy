@@ -2,11 +2,136 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // DEVELOPMENT MODE ONLY - Allow unauthenticated read access
-    // WARNING: This is for testing only! Do not use in production!
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return request.auth != null 
+        && (request.auth.token.role == 'admin' 
+            || request.auth.token.admin == true
+            || request.auth.uid in resource.data.adminUsers);
+    }
+    
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    function isAgent() {
+      return request.auth != null 
+        && (request.auth.token.role == 'agent' 
+            || request.auth.token.agent == true);
+    }
+
+    // Users collection - users can read/write their own data, admins can access all
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+    
+    // Orders collection - complex permission logic
+    match /orders/{orderId} {
+      // Users can read their own orders, agents can read assigned orders, admins can access all
+      allow read: if isAdmin() 
+        || (isAuthenticated() && resource.data.customer.uid == request.auth.uid)
+        || (isAgent() && resource.data.assignedAgentId == request.auth.uid);
+      
+      // Only authenticated users can create orders
+      allow create: if isAuthenticated();
+      
+      // Only admins and assigned agents can update orders
+      allow update: if isAdmin() 
+        || (isAgent() && resource.data.assignedAgentId == request.auth.uid);
+      
+      // Only admins can delete orders
+      allow delete: if isAdmin();
+    }
+    
+    // Agents collection - admins can manage, agents can read their own data
+    match /agents/{agentId} {
+      allow read: if isAdmin() || isOwner(agentId);
+      allow write: if isAdmin();
+    }
+    
+    // Payments collection - restricted access
+    match /payments/{paymentId} {
+      allow read: if isAdmin() 
+        || (isAuthenticated() && resource.data.customer_id == request.auth.uid);
+      allow write: if isAdmin();
+    }
+    
+    // Settings collection - admin only
+    match /settings/{settingId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Delivery OTPs - agents and admins only
+    match /delivery_otps/{otpId} {
+      allow read, write: if isAdmin() || isAgent();
+    }
+    
+    // Webhooks - system access only (via admin)
+    match /webhooks/{webhookId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Error logs - admin only
+    match /order_errors/{errorId} {
+      allow read, write: if isAdmin();
+    }
+    
+    match /payment_errors/{errorId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Analytics and reports - admin only
+    match /analytics/{analyticsId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Referrals and wallet - users can read their own, admins can access all
+    match /referrals/{referralId} {
+      allow read: if isAuthenticated() 
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+    
+    match /wallet/{walletId} {
+      allow read: if isAuthenticated() 
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+    
+    // Chat messages - participants can read/write their own conversations
+    match /chats/{chatId}/messages/{messageId} {
+      allow read, write: if isAuthenticated() 
+        && (resource.data.senderId == request.auth.uid 
+            || resource.data.receiverId == request.auth.uid 
+            || isAdmin());
+    }
+    
+    // File uploads - authenticated users for their orders
+    match /order_files/{fileId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    // Refunds - admin only
+    match /refunds/{refundId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // System notifications - admin only to create, users can read their own
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() 
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+      allow update, delete: if isAdmin();
+    }
+
+    // Catch-all for any other collections - admin only
     match /{document=**} {
-      allow read: if true;  // Allow anyone to read (development only)
-      allow write: if request.auth != null;  // Still require auth for writes
+      allow read, write: if isAdmin();
     }
   }
 }

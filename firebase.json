@@ -3,10 +3,7 @@
     "default": "master-photocopy"
   },
   "functions": {
-    "source": "functions",
-    "predeploy": [
-      "npm --prefix \"$RESOURCE_DIR\" run build"
-    ]
+    "source": "functions"
   },
   "firestore": {
     "database": "(default)",

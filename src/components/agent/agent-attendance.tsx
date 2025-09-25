@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { formatTime, formatDateOnly, safeToDate } from '@/lib/utils';
 import { 
   Clock, 
   PlayCircle, 
@@ -274,25 +275,6 @@ export function AgentAttendance({ agent }: AgentAttendanceProps) {
     }
   };
 
-  const formatTime = (date: any) => {
-    if (!date) return 'N/A';
-    let d: Date;
-    if (date.toDate && typeof date.toDate === 'function') {
-      d = date.toDate();
-    } else {
-      d = new Date(date);
-    }
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString([], { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
-
   const getTotalBreakTime = (breaks: any[]) => {
     return breaks.reduce((total, breakItem) => {
       return total + (breakItem.duration || 0);
@@ -347,7 +329,7 @@ export function AgentAttendance({ agent }: AgentAttendanceProps) {
                   {currentRecord?.checkIn ? 'Checked in at' : 'Today'}
                 </p>
                 <p className="font-medium">
-                  {currentRecord?.checkIn ? formatTime(currentRecord.checkIn) : new Date().toLocaleDateString()}
+                  {currentRecord?.checkIn ? formatTime(safeToDate(currentRecord.checkIn)) : new Date().toLocaleDateString()}
                 </p>
               </div>
             </div>
@@ -482,10 +464,10 @@ export function AgentAttendance({ agent }: AgentAttendanceProps) {
                   {attendanceHistory.slice(0, 10).map((record) => (
                     <TableRow key={record.id}>
                       <TableCell className="font-medium">
-                        {formatDate(record.date)}
+                        {formatDateOnly(record.date)}
                       </TableCell>
-                      <TableCell>{formatTime(record.checkIn)}</TableCell>
-                      <TableCell>{formatTime(record.checkOut)}</TableCell>
+                      <TableCell>{formatTime(safeToDate(record.checkIn))}</TableCell>
+                      <TableCell>{formatTime(safeToDate(record.checkOut))}</TableCell>
                       <TableCell>
                         {record.totalHours ? `${record.totalHours}h` : 
                          record.checkIn && !record.checkOut ? 'In Progress' : 'N/A'}

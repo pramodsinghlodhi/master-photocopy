@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseAdminDB } from '@/lib/firebase-admin';
 import { Order } from '@/lib/types';
 
-// GET /api/orders/[id] - Fetch single order
+// GET /api/orders/[orderId] - Fetch single order
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
     const db = getFirebaseAdminDB();
-    const { id } = params;
+    const { orderId } = await params;
 
-    const orderDoc = await db.collection('orders').doc(id).get();
+    const orderDoc = await db.collection('orders').doc(orderId).get();
 
     if (!orderDoc.exists) {
       return NextResponse.json(
@@ -46,18 +46,18 @@ export async function GET(
   }
 }
 
-// PUT /api/orders/[id] - Update order
+// PUT /api/orders/[orderId] - Update order
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
     const db = getFirebaseAdminDB();
-    const { id } = params;
+    const { orderId } = await params;
     const updateData = await request.json();
 
     // Check if order exists
-    const orderDoc = await db.collection('orders').doc(id).get();
+    const orderDoc = await db.collection('orders').doc(orderId).get();
     if (!orderDoc.exists) {
       return NextResponse.json(
         { error: 'Order not found' },
@@ -87,10 +87,10 @@ export async function PUT(
       ];
     }
 
-    await db.collection('orders').doc(id).update(finalUpdateData);
+    await db.collection('orders').doc(orderId).update(finalUpdateData);
 
     // Fetch updated order
-    const updatedDoc = await db.collection('orders').doc(id).get();
+    const updatedDoc = await db.collection('orders').doc(orderId).get();
     const data = updatedDoc.data();
     const order: Order = {
       id: updatedDoc.id,
@@ -117,26 +117,26 @@ export async function PUT(
   }
 }
 
-// DELETE /api/orders/[id] - Delete order
+// DELETE /api/orders/[orderId] - Delete order
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
     const db = getFirebaseAdminDB();
-    const { id } = params;
+    const { orderId } = await params;
 
     // Check if order exists
-    const orderDoc = await db.collection('orders').doc(id).get();
+    const orderDoc = await db.collection('orders').doc(orderId).get();
     if (!orderDoc.exists) {
       return NextResponse.json(
-        { error: `Order with ID '${id}' not found` },
+        { error: `Order with ID '${orderId}' not found` },
         { status: 404 }
       );
     }
 
     // Delete the order
-    await db.collection('orders').doc(id).delete();
+    await db.collection('orders').doc(orderId).delete();
 
     return NextResponse.json({
       success: true,

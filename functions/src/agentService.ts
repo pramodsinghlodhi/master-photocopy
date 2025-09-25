@@ -66,16 +66,38 @@ export class AgentService {
     }
   }
 
+  // Helper method to safely update agent documents
+  private async safeUpdateAgent(agentId: string, updateData: any): Promise<boolean> {
+    try {
+      const agentDoc = await this.db.collection('agents').doc(agentId).get();
+      if (!agentDoc.exists) {
+        console.warn(`Agent ${agentId} does not exist, skipping update`);
+        return false;
+      }
+      
+      await this.db.collection('agents').doc(agentId).update(updateData);
+      return true;
+    } catch (error) {
+      console.error(`Error updating agent ${agentId}:`, error);
+      throw error;
+    }
+  }
+
   // Approve agent
   async approveAgent(agentId: string): Promise<any> {
     try {
-      await this.db.collection('agents').doc(agentId).update({
+      const updateData = {
         approved: true,
         verification_status: 'approved',
         status: 'available',
         approvedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+      };
+
+      const updated = await this.safeUpdateAgent(agentId, updateData);
+      if (!updated) {
+        throw new Error(`Agent ${agentId} not found`);
+      }
       
       // Get agent details
       const agentDoc = await this.db.collection('agents').doc(agentId).get();
@@ -110,13 +132,18 @@ export class AgentService {
   // Reject agent
   async rejectAgent(agentId: string, reason: string): Promise<any> {
     try {
-      await this.db.collection('agents').doc(agentId).update({
+      const updateData = {
         approved: false,
         verification_status: 'rejected',
         rejection_reason: reason,
         rejectedAt: admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+      };
+
+      const updated = await this.safeUpdateAgent(agentId, updateData);
+      if (!updated) {
+        throw new Error(`Agent ${agentId} not found`);
+      }
       
       // Get agent details
       const agentDoc = await this.db.collection('agents').doc(agentId).get();
@@ -158,10 +185,15 @@ export class AgentService {
         return { success: false, error: 'Invalid status' };
       }
       
-      await this.db.collection('agents').doc(agentId).update({
+      const updateData = {
         status,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+      };
+
+      const updated = await this.safeUpdateAgent(agentId, updateData);
+      if (!updated) {
+        return { success: false, error: `Agent ${agentId} not found` };
+      }
       
       return { success: true, agentId, status };
     } catch (error) {
@@ -175,14 +207,23 @@ export class AgentService {
     try {
       const { latitude, longitude } = location;
       
-      await this.db.collection('agents').doc(agentId).update({
+      const updateData = {
         'location.latitude': latitude,
         'location.longitude': longitude,
         'location.last_updated': admin.firestore.FieldValue.serverTimestamp(),
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
+      };
+
+      const updated = await this.safeUpdateAgent(agentId, updateData);
+      if (!updated) {
+        return { success: false, error: `Agent ${agentId} not found` };
+      }
       
-      return { success: true, agentId, location };
+      return { 
+        success: true, 
+        message: 'Location updated successfully',
+        location: { latitude, longitude }
+      };
     } catch (error) {
       console.error('Error updating agent location:', error);
       throw error;
@@ -317,6 +358,12 @@ export class AgentService {
   private async updateAgentRating(agentId: string, newRating: number): Promise<void> {
     try {
       const agentDoc = await this.db.collection('agents').doc(agentId).get();
+      
+      if (!agentDoc.exists) {
+        console.warn(`Agent ${agentId} not found when updating rating`);
+        return;
+      }
+      
       const agent = agentDoc.data();
       
       if (agent) {
@@ -327,9 +374,13 @@ export class AgentService {
         const totalPoints = currentRating * (totalDeliveries - 1) + newRating;
         const averageRating = totalPoints / totalDeliveries;
         
-        await this.db.collection('agents').doc(agentId).update({
+        const updated = await this.safeUpdateAgent(agentId, {
           'performance.average_rating': parseFloat(averageRating.toFixed(2))
         });
+        
+        if (!updated) {
+          console.warn(`Failed to update rating for agent ${agentId} - document not found`);
+        }
       }
     } catch (error) {
       console.error('Error updating agent rating:', error);
@@ -470,18 +521,40 @@ export class AgentService {
   async bulkUpdateAgents(agentIds: string[], updates: any): Promise<any> {
     try {
       const batch = this.db.batch();
+      const validAgents: string[] = [];
       
-      agentIds.forEach(agentId => {
-        const agentRef = this.db.collection('agents').doc(agentId);
-        batch.update(agentRef, {
-          ...updates,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+      // Check which agents exist first
+      const agentChecks = await Promise.all(
+        agentIds.map(async (agentId) => {
+          const agentDoc = await this.db.collection('agents').doc(agentId).get();
+          return { agentId, exists: agentDoc.exists };
+        })
+      );
+      
+      // Only update existing agents
+      agentChecks.forEach(({ agentId, exists }) => {
+        if (exists) {
+          const agentRef = this.db.collection('agents').doc(agentId);
+          batch.update(agentRef, {
+            ...updates,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          validAgents.push(agentId);
+        } else {
+          console.warn(`Skipping update for non-existent agent: ${agentId}`);
+        }
       });
       
-      await batch.commit();
+      if (validAgents.length > 0) {
+        await batch.commit();
+      }
       
-      return { success: true, updated: agentIds.length };
+      return { 
+        success: true, 
+        updated: validAgents.length,
+        skipped: agentIds.length - validAgents.length,
+        validAgents
+      };
     } catch (error) {
       console.error('Error bulk updating agents:', error);
       throw error;
