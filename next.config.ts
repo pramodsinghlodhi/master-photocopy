@@ -17,17 +17,13 @@ const nextConfig: NextConfig = {
         pathname: '/**',
       },
     ],
-    // Enable optimized images for Firebase App Hosting
+    // Optimized for Firebase App Hosting
     unoptimized: false,
   },
   env: {
     // Only include non-NEXT_PUBLIC environment variables here
     RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
   },
-  // Configuration for Firebase App Hosting
-  // experimental: {
-  //   appDir: true,
-  // },
 };
 
 export default nextConfig;
