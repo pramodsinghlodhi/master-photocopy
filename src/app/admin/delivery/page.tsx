@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useConfirmationAlert } from '@/hooks/use-confirmation-alert';
+import { ProfileImageUpload } from '@/components/ui/image-upload';
 
 export default function DeliveryManagementPage() {
   const { showConfirmation, showSuccessAlert, showErrorAlert } = useConfirmationAlert();
@@ -74,6 +75,7 @@ export default function DeliveryManagementPage() {
     lastName: '',
     phone: '',
     email: '',
+    photoURL: '',
     vehicleType: 'bike',
     vehicleNumber: '',
     agentId: '',
@@ -88,6 +90,7 @@ export default function DeliveryManagementPage() {
     lastName: '',
     phone: '',
     email: '',
+    photoURL: '',
     vehicleType: 'bike',
     vehicleNumber: '',
     idProofFile: null as File | null,
@@ -250,6 +253,7 @@ export default function DeliveryManagementPage() {
         last_name: newAgentForm.lastName,
         phone_number: newAgentForm.phone, // Use phone_number to match API
         email: newAgentForm.email || '',
+        photoURL: newAgentForm.photoURL || undefined,
         password: newAgentForm.password, // In production, this should be hashed
         status: 'active',
         vehicle: {
@@ -296,6 +300,7 @@ export default function DeliveryManagementPage() {
         lastName: '',
         phone: '',
         email: '',
+        photoURL: '',
         vehicleType: 'bike',
         vehicleNumber: '',
         agentId: '',
@@ -350,6 +355,7 @@ export default function DeliveryManagementPage() {
         last_name: onboardingForm.lastName,
         phone_number: onboardingForm.phone, // Use phone_number to match API
         email: onboardingForm.email || '',
+        photoURL: onboardingForm.photoURL || undefined,
         status: 'pending',
         vehicle: {
           type: onboardingForm.vehicleType,
@@ -397,6 +403,7 @@ export default function DeliveryManagementPage() {
         lastName: '',
         phone: '',
         email: '',
+        photoURL: '',
         vehicleType: 'bike',
         vehicleNumber: '',
         idProofFile: null,
@@ -1377,6 +1384,14 @@ function UnifiedAgentDialog({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>Profile Photo (Optional)</Label>
+            <ProfileImageUpload
+              onUpload={(photoURL) => setForm(prev => ({ ...prev, photoURL }))}
+              currentImageURL={form.photoURL}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="vehicleType">Vehicle Type</Label>
@@ -1533,6 +1548,14 @@ function UnifiedAgentDialog({
                 value={onboardingForm.email}
                 onChange={(e) => setOnboardingForm(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="Enter email address"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Profile Photo (Optional)</Label>
+              <ProfileImageUpload
+                onUpload={(photoURL) => setOnboardingForm(prev => ({ ...prev, photoURL }))}
+                currentImageURL={onboardingForm.photoURL}
               />
             </div>
           </div>

@@ -23,6 +23,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { ProfileImageUpload } from '@/components/ui/image-upload';
 
 interface AgentOnboardingProps {
   user: any; // Firebase user
@@ -41,7 +42,8 @@ export function AgentOnboarding({ user, onComplete }: AgentOnboardingProps) {
     address: '',
     city: '',
     state: '',
-    pincode: ''
+    pincode: '',
+    photoURL: ''
   });
 
   const [vehicleInfo, setVehicleInfo] = useState({
@@ -122,6 +124,7 @@ export function AgentOnboarding({ user, onComplete }: AgentOnboardingProps) {
         first_name: personalInfo.first_name,
         last_name: personalInfo.last_name,
         email: personalInfo.email,
+        photoURL: personalInfo.photoURL || undefined,
         vehicle: {
           type: vehicleInfo.type as 'bike' | 'car' | 'bicycle',
           number: vehicleInfo.number
@@ -154,6 +157,7 @@ export function AgentOnboarding({ user, onComplete }: AgentOnboardingProps) {
         last_name: personalInfo.last_name,
         phone: user.phoneNumber || '',
         email: personalInfo.email,
+        photoURL: personalInfo.photoURL || undefined,
         createdAt: new Date(),
         updatedAt: new Date(),
         meta: {
@@ -242,6 +246,16 @@ export function AgentOnboarding({ user, onComplete }: AgentOnboardingProps) {
             />
           </div>
           <p className="text-xs text-muted-foreground">Phone number is verified and cannot be changed</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Profile Photo</Label>
+          <ProfileImageUpload
+            onUpload={(photoURL) => setPersonalInfo(prev => ({ ...prev, photoURL }))}
+            currentImageURL={personalInfo.photoURL}
+            userId={user.uid}
+          />
+          <p className="text-xs text-muted-foreground">Upload a clear photo for your agent profile</p>
         </div>
 
         <div className="space-y-2">

@@ -138,6 +138,7 @@ export type Agent = {
   first_name: string;
   last_name: string;
   email?: string;
+  photoURL?: string;
   vehicle: {
     type: 'bike' | 'car' | 'bicycle';
     number: string;
@@ -175,6 +176,7 @@ export type User = {
   last_name: string;
   phone: string;
   email?: string;
+  photoURL?: string;
   country?: string;
   language_code?: string;
   createdAt: any; // Firestore timestamp
