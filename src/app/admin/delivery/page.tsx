@@ -1,8 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { collection, query, onSnapshot, doc, updateDoc, where, addDoc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Agent, Order } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -107,38 +105,66 @@ export default function DeliveryManagementPage() {
   });
 
   useEffect(() => {
-    if (!db) {
-      setLoading(false);
-      console.warn('Firebase not connected - using emulator mode');
-      return;
-    }
+    const loadAgents = async () => {
+      try {
+        setLoading(true);
+        
+        const response = await fetch('/api/agents');
+        if (!response.ok) {
+          throw new Error('Failed to fetch agents');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          const agentsData = result.data.map((agent: any) => ({
+            agentId: agent.id,
+            ...agent
+          })) as Agent[];
+          
+          setAgents(agentsData);
+          calculateStats(agentsData);
+        } else {
+          throw new Error(result.error || 'Failed to load agents');
+        }
+      } catch (error) {
+        console.error('Error fetching agents:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load agents. Please check your admin permissions.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // Subscribe to agents
-    const agentsQuery = query(collection(db, 'agents'));
-    const unsubscribe = onSnapshot(agentsQuery, 
-      (snapshot) => {
-        const agentsData = snapshot.docs.map(doc => ({
-          agentId: doc.id,
-          ...doc.data()
+    loadAgents();
+  }, []);
+
+  // Function to refresh agents data
+  const refreshAgents = async () => {
+    try {
+      const response = await fetch('/api/agents');
+      if (!response.ok) {
+        throw new Error('Failed to fetch agents');
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        const agentsData = result.data.map((agent: any) => ({
+          agentId: agent.id,
+          ...agent
         })) as Agent[];
         
         setAgents(agentsData);
         calculateStats(agentsData);
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching agents:', error);
-        setLoading(false);
-        toast({
-          title: "Connection Error",
-          description: "Failed to load agents. Make sure Firebase emulators are running.",
-          variant: "destructive"
-        });
       }
-    );
-
-    return () => unsubscribe();
-  }, []);
+    } catch (error) {
+      console.error('Error refreshing agents:', error);
+    }
+  };
 
   useEffect(() => {
     // Apply search filter
@@ -158,23 +184,25 @@ export default function DeliveryManagementPage() {
 
   useEffect(() => {
     // Load orders for selected agent
-    if (!selectedAgent || !db) return;
+    if (!selectedAgent) return;
 
-    const ordersQuery = query(
-      collection(db, 'orders'),
-      where('assignedAgentId', '==', selectedAgent.agentId)
-    );
+    const loadAgentOrders = async () => {
+      try {
+        const response = await fetch(`/api/orders?agentId=${selectedAgent.agentId}`);
+        if (response.ok) {
+          const result = await response.json();
+          setAgentOrders(result.data.orders || []);
+        } else {
+          console.error('Failed to load agent orders:', response.statusText);
+          setAgentOrders([]);
+        }
+      } catch (error) {
+        console.error('Error loading agent orders:', error);
+        setAgentOrders([]);
+      }
+    };
 
-    const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[];
-      
-      setAgentOrders(ordersData);
-    });
-
-    return () => unsubscribe();
+    loadAgentOrders();
   }, [selectedAgent]);
 
   const calculateStats = (agentsData: Agent[]) => {
@@ -200,8 +228,6 @@ export default function DeliveryManagementPage() {
 
   const createAgentAccount = async () => {
     try {
-      if (!db) return;
-
       if (!newAgentForm.firstName || !newAgentForm.lastName || !newAgentForm.phone || !newAgentForm.agentId || !newAgentForm.password) {
         toast({
           title: "Error",
@@ -222,7 +248,7 @@ export default function DeliveryManagementPage() {
         agentId: newAgentForm.agentId,
         first_name: newAgentForm.firstName,
         last_name: newAgentForm.lastName,
-        phone: newAgentForm.phone,
+        phone_number: newAgentForm.phone, // Use phone_number to match API
         email: newAgentForm.email || '',
         password: newAgentForm.password, // In production, this should be hashed
         status: 'active',
@@ -241,12 +267,28 @@ export default function DeliveryManagementPage() {
         updatedAt: new Date()
       };
 
-      await addDoc(collection(db, 'agents'), agentData);
+      // Use API endpoint instead of direct Firestore access
+      const response = await fetch('/api/agents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(agentData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to create agent');
+      }
 
       toast({
         title: "Agent Created Successfully",
         description: `Agent account created with ID: ${newAgentForm.agentId}. Credentials have been generated.`
       });
+
+      // Refresh agents data
+      await refreshAgents();
 
       // Reset form
       setNewAgentForm({
@@ -279,8 +321,6 @@ export default function DeliveryManagementPage() {
 
   const submitOnboardingApplication = async () => {
     try {
-      if (!db) return;
-
       if (!onboardingForm.firstName || !onboardingForm.lastName || !onboardingForm.phone) {
         toast({
           title: "Error",
@@ -308,7 +348,7 @@ export default function DeliveryManagementPage() {
       const agentData = {
         first_name: onboardingForm.firstName,
         last_name: onboardingForm.lastName,
-        phone: onboardingForm.phone,
+        phone_number: onboardingForm.phone, // Use phone_number to match API
         email: onboardingForm.email || '',
         status: 'pending',
         vehicle: {
@@ -328,12 +368,28 @@ export default function DeliveryManagementPage() {
         updatedAt: new Date()
       };
 
-      await addDoc(collection(db, 'agents'), agentData);
+      // Use API endpoint instead of direct Firestore access
+      const response = await fetch('/api/agents', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(agentData)
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit onboarding application');
+      }
 
       toast({
         title: "Application Submitted",
         description: `Onboarding application for ${onboardingForm.firstName} ${onboardingForm.lastName} has been submitted for review.`
       });
+
+      // Refresh agents data
+      await refreshAgents();
 
       // Reset form
       setOnboardingForm({
@@ -369,31 +425,30 @@ export default function DeliveryManagementPage() {
 
   const updateAgentStatus = async (agentId: string, status: 'active' | 'suspended') => {
     try {
-      if (!db) return;
-      
-      const agentRef = doc(db, 'agents', agentId);
-      
-      // Check if the document exists first
-      const agentDoc = await getDoc(agentRef);
-      if (!agentDoc.exists()) {
-        console.warn(`Agent document ${agentId} does not exist`);
-        toast({
-          title: "Agent Not Found",
-          description: `Agent with ID ${agentId} was not found in the database.`,
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      await updateDoc(agentRef, {
-        status,
-        updatedAt: new Date()
+      const response = await fetch(`/api/agents/${agentId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status,
+          updatedAt: new Date()
+        })
       });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to update agent status');
+      }
 
       toast({
         title: "Agent Status Updated",
         description: `Agent has been ${status === 'active' ? 'approved' : 'suspended'}.`
       });
+
+      // Refresh agents data
+      await refreshAgents();
     } catch (error) {
       console.error('Error updating agent status:', error);
       toast({
@@ -406,37 +461,35 @@ export default function DeliveryManagementPage() {
 
   const changeAgentPassword = async () => {
     try {
-      if (!db || !selectedAgentForPassword || !newPassword.trim()) return;
+      if (!selectedAgentForPassword || !newPassword.trim()) return;
 
-      const agentRef = doc(db, 'agents', selectedAgentForPassword.agentId);
-      
-      // Check if the document exists first
-      const agentDoc = await getDoc(agentRef);
-      if (!agentDoc.exists()) {
-        console.warn(`Agent document ${selectedAgentForPassword.agentId} does not exist`);
+      const response = await fetch(`/api/agents/${selectedAgentForPassword.agentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          'credentials.password': newPassword.trim(),
+          'credentials.updatedAt': new Date().toISOString(),
+          'credentials.updatedBy': 'admin',
+          updatedAt: new Date().toISOString()
+        }),
+      });
+
+      if (response.ok) {
         toast({
-          title: "Agent Not Found",
-          description: `Agent with ID ${selectedAgentForPassword.agentId} was not found in the database.`,
-          variant: "destructive"
+          title: "Password Updated",
+          description: `Password changed successfully for ${selectedAgentForPassword.first_name} ${selectedAgentForPassword.last_name}`
         });
-        return;
+
+        setPasswordDialogOpen(false);
+        setNewPassword('');
+        setSelectedAgentForPassword(null);
+        await refreshAgents();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update password: ${response.statusText}`);
       }
-      
-      await updateDoc(agentRef, {
-        'credentials.password': newPassword.trim(),
-        'credentials.updatedAt': new Date(),
-        'credentials.updatedBy': 'admin',
-        updatedAt: new Date()
-      });
-
-      toast({
-        title: "Password Updated",
-        description: `Password changed successfully for ${selectedAgentForPassword.first_name} ${selectedAgentForPassword.last_name}`
-      });
-
-      setPasswordDialogOpen(false);
-      setNewPassword('');
-      setSelectedAgentForPassword(null);
     } catch (error) {
       console.error('Error changing password:', error);
       toast({
@@ -449,8 +502,6 @@ export default function DeliveryManagementPage() {
 
   const deleteAgent = async (agentId: string, agentName: string) => {
     try {
-      if (!db) return;
-
       const confirmed = await showConfirmation({
         title: 'Delete Agent',
         message: `Are you sure you want to delete agent ${agentName}? This action cannot be undone.`,
@@ -465,30 +516,29 @@ export default function DeliveryManagementPage() {
 
       // In a real app, you might want to soft delete instead of hard delete
       // For now, we'll update status to 'deleted'
-      const agentRef = doc(db, 'agents', agentId);
-      
-      // Check if the document exists first
-      const agentDoc = await getDoc(agentRef);
-      if (!agentDoc.exists()) {
-        console.warn(`Agent document ${agentId} does not exist`);
-        showErrorAlert({
-          title: "Agent Not Found",
-          description: `Agent with ID ${agentId} was not found in the database.`
-        });
-        return;
-      }
-      
-      await updateDoc(agentRef, {
-        status: 'deleted',
-        deletedAt: new Date(),
-        deletedBy: 'admin',
-        updatedAt: new Date()
+      const response = await fetch(`/api/agents/${agentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'deleted',
+          deletedAt: new Date().toISOString(),
+          deletedBy: 'admin',
+          updatedAt: new Date().toISOString()
+        }),
       });
 
-      showSuccessAlert({
-        title: "Agent Deleted",
-        description: `Agent ${agentName} has been deleted successfully.`
-      });
+      if (response.ok) {
+        showSuccessAlert({
+          title: "Agent Deleted",
+          description: `Agent ${agentName} has been deleted successfully.`
+        });
+        await refreshAgents();
+      } else {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to delete agent: ${response.statusText}`);
+      }
     } catch (error) {
       console.error('Error deleting agent:', error);
       showErrorAlert({
