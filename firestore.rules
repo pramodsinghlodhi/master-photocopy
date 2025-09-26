@@ -34,7 +34,7 @@ service cloud.firestore {
     match /orders/{orderId} {
       // Users can read their own orders, agents can read assigned orders, admins can access all
       allow read: if isAdmin() 
-        || (isAuthenticated() && resource.data.customer.uid == request.auth.uid)
+        || (isAuthenticated() && resource.data.userId == request.auth.uid)
         || (isAgent() && resource.data.assignedAgentId == request.auth.uid);
       
       // Only authenticated users can create orders

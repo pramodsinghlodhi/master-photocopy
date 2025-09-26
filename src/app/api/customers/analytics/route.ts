@@ -57,8 +57,13 @@ export async function GET(request: NextRequest) {
           existing.isActive = true;
         }
       } else {
-        // Generate a customer ID based on the customer key
-        const customerId = `CUST${customerKey.slice(-3).toUpperCase()}`;
+        // Generate a unique customer ID based on the customer key with hash to avoid duplicates
+        const hash = customerKey.split('').reduce((a: number, b: string) => {
+          a = ((a << 5) - a) + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+        const uniqueId = Math.abs(hash).toString().padStart(6, '0').slice(-6);
+        const customerId = `CUST${uniqueId}`;
         
         customerData.set(customerKey, {
           id: customerId,
