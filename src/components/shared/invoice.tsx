@@ -62,7 +62,7 @@ export const Invoice: React.FC<InvoiceProps> = ({ order, showPrintButton = true 
         <div className="flex justify-between items-start">
           <div>
             <h1 className="text-4xl font-bold text-blue-600 mb-2">
-              Masterphoto Copy
+              Master PhotoCopy
             </h1>
             <p className="text-gray-600">Professional Printing & Copy Services</p>
             <p className="text-gray-600">📧 support@masterphotocopy.com</p>
@@ -289,7 +289,7 @@ export const Invoice: React.FC<InvoiceProps> = ({ order, showPrintButton = true 
 
       {/* Footer */}
       <div className="text-center text-gray-600 text-sm border-t pt-6">
-        <p className="mb-2">Thank you for choosing Masterphoto Copy!</p>
+        <p className="mb-2">Thank you for choosing Master PhotoCopy!</p>
         <p>For any queries, contact us at support@masterphotocopy.com</p>
         <p className="mt-4">This is a computer-generated invoice.</p>
       </div>

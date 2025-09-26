@@ -31,7 +31,7 @@ export function MobileNavContent({ isSheet = false } : {isSheet?: boolean}) {
                   className="flex items-center gap-2 text-lg font-semibold mb-4"
                 >
                   <Printer className="h-6 w-6 text-primary" />
-                  <span className="font-bold">Masterphoto Copy</span>
+                  <span className="font-bold">Master PhotoCopy</span>
                 </Link>
                 {sheetNavLinks.map(link => (
                     <Link

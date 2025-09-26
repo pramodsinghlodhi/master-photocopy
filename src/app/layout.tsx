@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'Masterphoto Copy',
+  title: 'Master PhotoCopy',
   description: 'High-quality document printing services.',
 };
 

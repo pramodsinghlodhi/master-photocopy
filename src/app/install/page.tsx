@@ -136,7 +136,7 @@ NEXT_PUBLIC_FIREBASE_APP_ID=${firebaseConfig.appId}
 
 # Application Configuration
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_APP_NAME="Masterphoto Copy"
+NEXT_PUBLIC_APP_NAME="Master PhotoCopy"
 
 # Development Settings
 NODE_ENV=development
@@ -227,7 +227,7 @@ WHATSAPP_VERIFY_TOKEN=your_verify_token_here`;
     
     toast({
       title: "Installation Complete!",
-      description: "Your Masterphoto Copy application is ready to use"
+      description: "Your Master PhotoCopy application is ready to use"
     });
   };
 
@@ -252,7 +252,7 @@ WHATSAPP_VERIFY_TOKEN=your_verify_token_here`;
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Masterphoto Copy Installation
+            Master PhotoCopy Installation
           </h1>
           <p className="text-lg text-gray-600">
             Set up your professional printing management system
@@ -540,7 +540,7 @@ WHATSAPP_VERIFY_TOKEN=your_verify_token_here`;
                   Installation Complete!
                 </CardTitle>
                 <CardDescription>
-                  Your Masterphoto Copy application is ready to use
+                  Your Master PhotoCopy application is ready to use
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">

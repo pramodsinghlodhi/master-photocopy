@@ -202,7 +202,7 @@ class SMSService {
 
     try {
       const otp = this.generateOTP();
-      const message = customMessage || `Your Master Photocopy OTP is: ${otp}. Valid for ${this.otpConfig.expiry} minutes. Do not share with anyone.`;
+      const message = customMessage || `Your Master PhotoCopy OTP is: ${otp}. Valid for ${this.otpConfig.expiry} minutes. Do not share with anyone.`;
 
       const sent = await this.sendSMS({
         to: phoneNumber,
@@ -265,7 +265,7 @@ class SMSService {
   async sendWelcomeSMS(phoneNumber: string, name: string): Promise<boolean> {
     return this.sendSMS({
       to: phoneNumber,
-      message: `Welcome to Master Photocopy, ${name}! Start uploading documents for printing. Need help? Contact support.`
+      message: `Welcome to Master PhotoCopy, ${name}! Start uploading documents for printing. Need help? Contact support.`
     });
   }
 
@@ -285,8 +285,8 @@ class SMSService {
 
   async sendDeliveryNotificationSMS(phoneNumber: string, orderId: string, trackingId?: string): Promise<boolean> {
     const message = trackingId 
-      ? `Your order ${orderId} is out for delivery! Tracking: ${trackingId}. Master Photocopy`
-      : `Your order ${orderId} is out for delivery! Master Photocopy`;
+      ? `Your order ${orderId} is out for delivery! Tracking: ${trackingId}. Master PhotoCopy`
+      : `Your order ${orderId} is out for delivery! Master PhotoCopy`;
     
     return this.sendSMS({
       to: phoneNumber,

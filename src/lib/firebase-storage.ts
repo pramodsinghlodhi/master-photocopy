@@ -11,8 +11,107 @@ export interface UploadProgress {
 
 export type UploadType = 'ads' | 'profiles' | 'documents' | 'orders';
 
+export interface FileUploadSettings {
+  ads: {
+    maxSize: number;
+    allowedTypes: string[];
+    enabled: boolean;
+  };
+  profiles: {
+    maxSize: number;
+    allowedTypes: string[];
+    enabled: boolean;
+  };
+  documents: {
+    maxSize: number;
+    allowedTypes: string[];
+    enabled: boolean;
+  };
+  orders: {
+    maxSize: number;
+    allowedTypes: string[];
+    enabled: boolean;
+  };
+  general: {
+    compressionQuality: number;
+    enableCompression: boolean;
+    enableVirusScan: boolean;
+    maxFileNameLength: number;
+  };
+}
+
 export class FirebaseStorageService {
   private storage = storage;
+  private uploadSettings: FileUploadSettings | null = null;
+  private settingsLastFetched: number = 0;
+  private readonly SETTINGS_CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  /**
+   * Get current upload settings from admin configuration
+   */
+  private async getUploadSettings(): Promise<FileUploadSettings> {
+    const now = Date.now();
+    
+    // Use cached settings if they're still fresh
+    if (this.uploadSettings && (now - this.settingsLastFetched) < this.SETTINGS_CACHE_DURATION) {
+      return this.uploadSettings;
+    }
+
+    try {
+      const response = await fetch('/api/admin/upload-settings');
+      if (response.ok) {
+        this.uploadSettings = await response.json();
+        this.settingsLastFetched = now;
+        return this.uploadSettings!;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch upload settings, using defaults:', error);
+    }
+
+    // Fallback to default settings
+    return this.getDefaultSettings();
+  }
+
+  /**
+   * Get default upload settings
+   */
+  private getDefaultSettings(): FileUploadSettings {
+    return {
+      ads: {
+        maxSize: 5 * 1024 * 1024, // 5MB
+        allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+        enabled: true
+      },
+      profiles: {
+        maxSize: 2 * 1024 * 1024, // 2MB
+        allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+        enabled: true
+      },
+      documents: {
+        maxSize: 10 * 1024 * 1024, // 10MB
+        allowedTypes: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
+        enabled: true
+      },
+      orders: {
+        maxSize: 50 * 1024 * 1024, // 50MB
+        allowedTypes: [
+          'image/jpeg', 
+          'image/png', 
+          'image/webp', 
+          'application/pdf', 
+          'application/msword', 
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        ],
+        enabled: true
+      },
+      general: {
+        compressionQuality: 0.8,
+        enableCompression: true,
+        enableVirusScan: false,
+        maxFileNameLength: 100
+      }
+    };
+  }
 
   /**
    * Upload file to Firebase Storage
@@ -25,11 +124,14 @@ export class FirebaseStorageService {
   ): Promise<string> {
     if (!file) throw new Error('No file provided');
     
-    // Validate file type
-    this.validateFile(file, type);
+    // Get current upload settings
+    const settings = await this.getUploadSettings();
+    
+    // Validate file type and size with dynamic settings
+    await this.validateFile(file, type, settings);
     
     // Generate unique filename
-    const fileName = this.generateFileName(file, type, userId);
+    const fileName = this.generateFileName(file, type, userId, settings.general.maxFileNameLength);
     const filePath = `${type}/${fileName}`;
     
     try {
@@ -58,6 +160,19 @@ export class FirebaseStorageService {
   }
 
   /**
+   * Get upload limits for a specific type
+   */
+  async getUploadLimits(type: UploadType) {
+    const settings = await this.getUploadSettings();
+    return {
+      maxSize: settings[type].maxSize,
+      allowedTypes: settings[type].allowedTypes,
+      enabled: settings[type].enabled,
+      maxSizeFormatted: this.formatFileSize(settings[type].maxSize)
+    };
+  }
+
+  /**
    * Delete file from Firebase Storage
    */
   async deleteFile(downloadURL: string): Promise<void> {
@@ -71,44 +186,56 @@ export class FirebaseStorageService {
   }
 
   /**
-   * Validate file based on type
+   * Validate file based on type and dynamic settings
    */
-  private validateFile(file: File, type: UploadType): void {
-    const maxSizes = {
-      ads: 5 * 1024 * 1024, // 5MB for ad images
-      profiles: 2 * 1024 * 1024, // 2MB for profile images
-      documents: 10 * 1024 * 1024, // 10MB for documents
-      orders: 50 * 1024 * 1024, // 50MB for order files
-    };
-
-    const allowedTypes = {
-      ads: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-      profiles: ['image/jpeg', 'image/png', 'image/webp'],
-      documents: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'],
-      orders: ['image/jpeg', 'image/png', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
-    };
+  private async validateFile(file: File, type: UploadType, settings: FileUploadSettings): Promise<void> {
+    const typeSettings = settings[type];
+    
+    // Check if upload is enabled for this type
+    if (!typeSettings.enabled) {
+      throw new Error(`${type} uploads are currently disabled`);
+    }
 
     // Check file size
-    if (file.size > maxSizes[type]) {
-      throw new Error(`File size must be less than ${this.formatFileSize(maxSizes[type])}`);
+    if (file.size > typeSettings.maxSize) {
+      throw new Error(`File size must be less than ${this.formatFileSize(typeSettings.maxSize)}`);
     }
 
     // Check file type
-    if (!allowedTypes[type].includes(file.type)) {
-      throw new Error(`File type ${file.type} is not allowed for ${type}`);
+    if (!typeSettings.allowedTypes.includes(file.type)) {
+      const allowedTypesReadable = typeSettings.allowedTypes
+        .map(type => type.split('/')[1]?.toUpperCase())
+        .filter(Boolean)
+        .join(', ');
+      throw new Error(`File type ${file.type} is not allowed. Allowed types: ${allowedTypesReadable}`);
+    }
+
+    // Check filename length
+    if (file.name.length > settings.general.maxFileNameLength) {
+      throw new Error(`Filename must be less than ${settings.general.maxFileNameLength} characters`);
     }
   }
 
   /**
-   * Generate unique filename
+   * Generate unique filename with length validation
    */
-  private generateFileName(file: File, type: UploadType, userId?: string): string {
+  private generateFileName(file: File, type: UploadType, userId?: string, maxLength?: number): string {
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2);
-    const extension = file.name.split('.').pop();
+    const extension = file.name.split('.').pop() || '';
     
     const prefix = userId ? `${userId}_` : '';
-    return `${prefix}${timestamp}_${randomId}.${extension}`;
+    let filename = `${prefix}${timestamp}_${randomId}.${extension}`;
+    
+    // Truncate if too long
+    const maxLen = maxLength || 100;
+    if (filename.length > maxLen) {
+      const availableLength = maxLen - extension.length - 1; // -1 for the dot
+      const baseFilename = filename.substring(0, availableLength);
+      filename = `${baseFilename}.${extension}`;
+    }
+    
+    return filename;
   }
 
   /**

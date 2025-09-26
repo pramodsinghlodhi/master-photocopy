@@ -11,7 +11,7 @@ export default function AuthLayout({
         <div className="mb-8 flex items-center text-2xl font-bold text-primary">
             <Link href="/" className="flex items-center gap-2">
                 <Printer className="h-8 w-8" />
-                <span>Masterphoto Copy</span>
+                <span>Master PhotoCopy</span>
             </Link>
         </div>
       {children}

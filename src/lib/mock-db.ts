@@ -41,7 +41,7 @@ By using our services, you agree to be bound by these Terms. If you do not agree
 ## 2. Your Account
 You are responsible for safeguarding your account, and you agree not to disclose your password to any third party. You must notify us immediately upon becoming aware of any breach of security or unauthorized use of your account.`,
         privacy: `## Introduction
-Welcome to Masterphoto Copy. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about our policy, or our practices with regards to your personal information, please contact us.
+Welcome to Master PhotoCopy. We are committed to protecting your personal information and your right to privacy. If you have any questions or concerns about our policy, or our practices with regards to your personal information, please contact us.
 
 ## Information We Collect
 We collect personal information that you voluntarily provide to us when you register on the website.`,

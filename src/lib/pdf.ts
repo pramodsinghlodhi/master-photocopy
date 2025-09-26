@@ -22,7 +22,7 @@ export async function generateInvoicePdf(order: Order): Promise<Uint8Array> {
   const primaryColor = rgb(37/255, 99/255, 235/255); // #2563eb
 
   // Header
-  drawText('Masterphoto Copy', 50, height - 50, { font: boldFont, size: 24, color: primaryColor });
+  drawText('Master PhotoCopy', 50, height - 50, { font: boldFont, size: 24, color: primaryColor });
   drawText('INVOICE', width - 150, height - 50, { font: boldFont, size: 24 });
 
   // Invoice Info

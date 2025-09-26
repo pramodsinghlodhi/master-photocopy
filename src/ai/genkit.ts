@@ -1,4 +1,4 @@
-// AI Configuration for Master Photocopy
+// AI Configuration for Master PhotoCopy
 // This module handles Genkit AI initialization with proper error handling
 
 // Check if Gemini API key is available

@@ -45,7 +45,7 @@ export default function LandingPage() {
       <header className="px-4 lg:px-6 h-16 flex items-center shadow-sm">
         <Link href="#" className="flex items-center justify-center" prefetch={false}>
           <Printer className="h-6 w-6 text-primary" />
-          <span className="ml-2 text-xl font-bold">Masterphoto Copy</span>
+          <span className="ml-2 text-xl font-bold">Master PhotoCopy</span>
         </Link>
         <nav className="ml-auto flex gap-4 sm:gap-6">
           <Link href="/login" className="text-sm font-medium hover:underline underline-offset-4" prefetch={false}>
@@ -115,7 +115,7 @@ export default function LandingPage() {
         </section>
       </main>
       <footer className="flex flex-col gap-2 sm:flex-row py-6 w-full shrink-0 items-center px-4 md:px-6 border-t">
-        <p className="text-xs text-muted-foreground">&copy; 2024 Masterphoto Copy. All rights reserved.</p>
+        <p className="text-xs text-muted-foreground">&copy; 2024 Master PhotoCopy. All rights reserved.</p>
         <nav className="sm:ml-auto flex gap-4 sm:gap-6">
           <Link href="/legal/terms" className="text-xs hover:underline underline-offset-4" prefetch={false}>
             Terms of Service

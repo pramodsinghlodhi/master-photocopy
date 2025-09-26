@@ -13,13 +13,13 @@ interface ReferralShareProps {
 export function ReferralShare({ referralCode }: ReferralShareProps) {
     const { toast } = useToast();
     const referralUrl = `https://masterphotocopy.com/signup?ref=${referralCode}`;
-    const shareText = `Join Masterphoto Copy and get a discount on your first order! Use my code: ${referralCode}`;
+    const shareText = `Join Master PhotoCopy and get a discount on your first order! Use my code: ${referralCode}`;
 
     const socialPlatforms = [
         { name: 'WhatsApp', icon: MessageSquare, url: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${referralUrl}`)}` },
         { name: 'Twitter', icon: Twitter, url: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(referralUrl)}` },
         { name: 'Facebook', icon: Facebook, url: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(referralUrl)}` },
-        { name: 'LinkedIn', icon: Linkedin, url: `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(referralUrl)}&title=${encodeURIComponent('Join Masterphoto Copy!')}&summary=${encodeURIComponent(shareText)}` },
+        { name: 'LinkedIn', icon: Linkedin, url: `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(referralUrl)}&title=${encodeURIComponent('Join Master PhotoCopy!')}&summary=${encodeURIComponent(shareText)}` },
     ];
 
     const handleShare = (url: string) => {

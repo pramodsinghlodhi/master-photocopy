@@ -364,7 +364,7 @@ function AuthPriceSummary({ files, groups, totalCost }: PriceSummaryProps) {
             key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
             amount: order.amount,
             currency: "INR",
-            name: "Masterphoto Copy",
+            name: "Master PhotoCopy",
             description: "Document Printing Service",
             image: "/icon.png", // Add your logo here
             order_id: order.id,

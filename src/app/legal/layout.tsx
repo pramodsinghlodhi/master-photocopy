@@ -21,7 +21,7 @@ export default function LegalLayout({
         </Button>
         <Link href="/" className="flex items-center justify-center" prefetch={false}>
           <Printer className="h-6 w-6 text-primary" />
-          <span className="ml-2 text-xl font-bold">Masterphoto Copy</span>
+          <span className="ml-2 text-xl font-bold">Master PhotoCopy</span>
         </Link>
       </header>
       <main className="flex-1 py-12 md:py-16">

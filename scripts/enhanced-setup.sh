@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Enhanced Setup Script for Masterphoto Copy - Smart Photocopy Order Management System
+# Enhanced Setup Script for Master PhotoCopy - Smart Photocopy Order Management System
 # This script provides a complete installation and configuration experience
 
 set -e

@@ -170,7 +170,7 @@ export default function ConfigWizard() {
     // Application settings
     config.push('# Application Configuration');
     config.push(`NEXT_PUBLIC_APP_URL=http://${deploymentConfig.domain}`);
-    config.push(`NEXT_PUBLIC_APP_NAME="Masterphoto Copy"`);
+    config.push(`NEXT_PUBLIC_APP_NAME="Master PhotoCopy"`);
     config.push(`NODE_ENV=${deploymentConfig.environment}`);
     config.push('');
 
@@ -317,7 +317,7 @@ export default function ConfigWizard() {
             Configuration Wizard
           </h1>
           <p className="text-lg text-gray-600">
-            Configure all services and integrations for your Masterphoto Copy application
+            Configure all services and integrations for your Master PhotoCopy application
           </p>
         </div>
 

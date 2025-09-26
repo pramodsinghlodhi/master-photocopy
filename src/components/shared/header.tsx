@@ -24,7 +24,7 @@ export default function Header() {
           className="flex items-center gap-2 text-lg font-semibold md:text-base"
         >
           <Printer className="h-6 w-6 text-primary" />
-          <span className="font-bold">Masterphoto Copy</span>
+          <span className="font-bold">Master PhotoCopy</span>
         </Link>
         <Link
           href="/dashboard"

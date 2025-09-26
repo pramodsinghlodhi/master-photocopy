@@ -176,15 +176,15 @@ class EmailService {
   async sendWelcomeEmail(to: string, name: string): Promise<boolean> {
     return this.sendEmail({
       to,
-      subject: 'Welcome to Master Photocopy!',
+      subject: 'Welcome to Master PhotoCopy!',
       html: `
         <h1>Welcome, ${name}!</h1>
-        <p>Thank you for joining Master Photocopy. We're excited to serve your printing needs.</p>
+        <p>Thank you for joining Master PhotoCopy. We're excited to serve your printing needs.</p>
         <p>Get started by uploading your first document for printing.</p>
         <p>If you have any questions, feel free to contact our support team.</p>
-        <p>Best regards,<br>Master Photocopy Team</p>
+        <p>Best regards,<br>Master PhotoCopy Team</p>
       `,
-      text: `Welcome, ${name}! Thank you for joining Master Photocopy. We're excited to serve your printing needs.`
+      text: `Welcome, ${name}! Thank you for joining Master PhotoCopy. We're excited to serve your printing needs.`
     });
   }
 
@@ -203,7 +203,7 @@ class EmailService {
           <li>Status: ${orderDetails.status}</li>
         </ul>
         <p>You can track your order status in your dashboard.</p>
-        <p>Thank you for choosing Master Photocopy!</p>
+        <p>Thank you for choosing Master PhotoCopy!</p>
       `,
       text: `Order Confirmed! Your order ${orderDetails.orderId} has been received and is being processed.`
     });
@@ -212,10 +212,10 @@ class EmailService {
   async sendPasswordResetEmail(to: string, resetLink: string): Promise<boolean> {
     return this.sendEmail({
       to,
-      subject: 'Reset Your Password - Master Photocopy',
+      subject: 'Reset Your Password - Master PhotoCopy',
       html: `
         <h1>Reset Your Password</h1>
-        <p>You requested a password reset for your Master Photocopy account.</p>
+        <p>You requested a password reset for your Master PhotoCopy account.</p>
         <p>Click the link below to reset your password:</p>
         <a href="${resetLink}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
         <p>This link will expire in 1 hour.</p>
@@ -228,7 +228,7 @@ class EmailService {
   async sendOTPEmail(to: string, otp: string): Promise<boolean> {
     return this.sendEmail({
       to,
-      subject: 'Your OTP Code - Master Photocopy',
+      subject: 'Your OTP Code - Master PhotoCopy',
       html: `
         <h1>Your Verification Code</h1>
         <p>Your OTP code is: <strong style="font-size: 24px; color: #007bff;">${otp}</strong></p>
