@@ -163,7 +163,7 @@ class NotificationService {
       }
 
       return null;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Get template error:", error);
       return null;
     }

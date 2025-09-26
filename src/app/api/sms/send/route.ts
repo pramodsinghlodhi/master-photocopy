@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('SMS API error:', error);
     return NextResponse.json(
       { error: 'Failed to send SMS' },
@@ -60,7 +60,7 @@ async function handleTwilioSMS(data: any) {
     } else {
       throw new Error(result.message || 'Twilio API error');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Twilio SMS error:', error);
     return NextResponse.json(
       { error: 'Failed to send SMS via Twilio' },
@@ -79,7 +79,7 @@ async function handleFirebaseSMS(data: any) {
       success: true,
       provider: 'firebase'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Firebase SMS error:', error);
     return NextResponse.json(
       { error: 'Failed to send SMS via Firebase' },

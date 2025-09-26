@@ -30,7 +30,7 @@ export function getFirebaseAdminApp() {
 
     console.log('Firebase Admin SDK initialized successfully');
     return firebaseAdminApp;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to initialize Firebase Admin SDK:', error);
     return null;
   }
@@ -46,7 +46,7 @@ export function getFirebaseAdminDB() {
     const db = admin.firestore(app);
     console.log('Firebase Admin Firestore instance obtained');
     return db;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting Firebase Admin DB:', error);
     throw error;
   }

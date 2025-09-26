@@ -53,7 +53,7 @@ class UnifiedStorageService {
       this.currentConfig = defaultConfig;
       
       return defaultConfig;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading storage configuration:', error);
       return { provider: 'firebase' };
     }
@@ -110,7 +110,7 @@ class UnifiedStorageService {
         path: filePath,
         provider: 'aws-s3'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading to S3:', error);
       throw new Error('Failed to upload file to S3');
     }
@@ -134,7 +134,7 @@ class UnifiedStorageService {
       };
 
       return uploadResult;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading to Firebase:', error);
       throw new Error('Failed to upload file to Firebase Storage');
     }
@@ -177,7 +177,7 @@ class UnifiedStorageService {
         metadata: response.Metadata,
         provider: 'aws-s3'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting file from S3:', error);
       throw new Error('Failed to get file from S3');
     }
@@ -187,7 +187,7 @@ class UnifiedStorageService {
     try {
       // Simplified Firebase implementation
       throw new Error('Firebase Storage get file not implemented - use S3 instead');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting file from Firebase:', error);
       throw new Error('Failed to get file from Firebase Storage');
     }
@@ -223,7 +223,7 @@ class UnifiedStorageService {
         success: true,
         provider: 'aws-s3'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting file from S3:', error);
       throw new Error('Failed to delete file from S3');
     }
@@ -236,7 +236,7 @@ class UnifiedStorageService {
         success: true,
         provider: 'firebase'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting file from Firebase:', error);
       throw new Error('Failed to delete file from Firebase Storage');
     }
@@ -285,7 +285,7 @@ class UnifiedStorageService {
         files,
         provider: 'aws-s3'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error listing files from S3:', error);
       throw new Error('Failed to list files from S3');
     }
@@ -301,7 +301,7 @@ class UnifiedStorageService {
         files: [],
         provider: 'firebase'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error listing files from Firebase:', error);
       throw new Error('Failed to list files from Firebase Storage');
     }
@@ -342,7 +342,7 @@ class UnifiedStorageService {
         url,
         provider: 'aws-s3'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating S3 signed URL:', error);
       throw new Error('Failed to generate S3 signed URL');
     }
@@ -361,7 +361,7 @@ class UnifiedStorageService {
         url,
         provider: 'firebase'
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error generating Firebase signed URL:', error);
       throw new Error('Failed to generate Firebase signed URL');
     }
@@ -387,7 +387,7 @@ class UnifiedStorageService {
       } else {
         this.s3Client = null;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating storage configuration:', error);
       throw new Error('Failed to update storage configuration');
     }

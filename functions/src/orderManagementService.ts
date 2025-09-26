@@ -143,7 +143,7 @@ export class OrderManagementService {
       await this.handleStatusChange(orderId, status, order);
       
       return { success: true, orderId, status };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating order status:', error);
       throw error;
     }
@@ -253,7 +253,7 @@ export class OrderManagementService {
       if (agent) {
         await this.assignAgent(orderId, agent.uid);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error auto-assigning order:', error);
     }
   }
@@ -318,7 +318,7 @@ export class OrderManagementService {
       }
       
       return { success: true, orderId, agentId };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error assigning agent:', error);
       throw error;
     }
@@ -358,7 +358,7 @@ export class OrderManagementService {
         throw new Error(shiprocketResult.error || 'Failed to create Shiprocket order');
       }
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating Shiprocket order:', error);
       // Fallback to own delivery
       await this.db.collection('orders').doc(orderId).update({
@@ -411,7 +411,7 @@ export class OrderManagementService {
       await batch.commit();
       
       return { success: true, updated: orderIds.length };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error bulk updating orders:', error);
       throw error;
     }
@@ -441,7 +441,7 @@ export class OrderManagementService {
       };
       
       return analytics;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting order analytics:', error);
       throw error;
     }

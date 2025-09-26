@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
       data: result,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error listing files:', error);
     return NextResponse.json(
       { error: 'Failed to list files' },

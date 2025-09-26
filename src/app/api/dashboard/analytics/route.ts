@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
       data: analytics
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Dashboard analytics error:', error);
     
     return NextResponse.json(

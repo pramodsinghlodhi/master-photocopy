@@ -60,7 +60,7 @@ export class AgentService {
       });
       
       return { success: true, agentId: agentRef.id };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error registering agent:', error);
       throw error;
     }
@@ -77,7 +77,7 @@ export class AgentService {
       
       await this.db.collection('agents').doc(agentId).update(updateData);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Error updating agent ${agentId}:`, error);
       throw error;
     }
@@ -123,7 +123,7 @@ export class AgentService {
       }
       
       return { success: true, agentId };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error approving agent:', error);
       throw error;
     }
@@ -170,7 +170,7 @@ export class AgentService {
       }
       
       return { success: true, agentId };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error rejecting agent:', error);
       throw error;
     }
@@ -196,7 +196,7 @@ export class AgentService {
       }
       
       return { success: true, agentId, status };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating agent status:', error);
       throw error;
     }
@@ -224,7 +224,7 @@ export class AgentService {
         message: 'Location updated successfully',
         location: { latitude, longitude }
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating agent location:', error);
       throw error;
     }
@@ -250,7 +250,7 @@ export class AgentService {
       }));
       
       return { success: true, agents };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting available agents:', error);
       throw error;
     }
@@ -308,7 +308,7 @@ export class AgentService {
       }
       
       return { success: true, agentId, orderId };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error assigning order to agent:', error);
       throw error;
     }
@@ -348,7 +348,7 @@ export class AgentService {
       }
       
       return { success: true, agentId, orderId };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error completing delivery:', error);
       throw error;
     }
@@ -382,7 +382,7 @@ export class AgentService {
           console.warn(`Failed to update rating for agent ${agentId} - document not found`);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating agent rating:', error);
     }
   }
@@ -426,7 +426,7 @@ export class AgentService {
       };
       
       return { success: true, agentId, performance };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting agent performance:', error);
       throw error;
     }
@@ -511,7 +511,7 @@ export class AgentService {
         recentDeliveries,
         todayStats
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting agent dashboard:', error);
       throw error;
     }
@@ -555,7 +555,7 @@ export class AgentService {
         skipped: agentIds.length - validAgents.length,
         validAgents
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error bulk updating agents:', error);
       throw error;
     }
@@ -591,7 +591,7 @@ export class AgentService {
       };
       
       return analytics;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting agent analytics:', error);
       throw error;
     }

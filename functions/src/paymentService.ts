@@ -396,7 +396,7 @@ export class PaymentService {
       
       return config;
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting Razorpay config:', error);
       
       // Return safe test credentials as fallback

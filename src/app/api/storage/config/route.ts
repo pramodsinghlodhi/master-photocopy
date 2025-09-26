@@ -36,7 +36,7 @@ export async function GET() {
 
     return NextResponse.json(config);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching storage config:', error);
     return NextResponse.json(
       { error: 'Failed to fetch storage configuration' },
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       message: 'Storage configuration updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating storage config:', error);
     return NextResponse.json(
       { error: 'Failed to update storage configuration' },
@@ -99,7 +99,7 @@ export async function PATCH(request: NextRequest) {
       message: 'Storage configuration updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating storage config:', error);
     return NextResponse.json(
       { error: 'Failed to update storage configuration' },

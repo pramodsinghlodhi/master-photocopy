@@ -86,7 +86,7 @@ export default function StaffManagementPage() {
                   <TableCell className="font-medium">{member.name}</TableCell>
                   <TableCell>{member.email}</TableCell>
                   <TableCell>
-                    <Badge variant={getRoleBadgeVariant(member.role)}>{member.role}</Badge>
+                    <Badge variant={getRoleBadgeVariant(member.role as any)}>{member.role}</Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant={member.status === 'Active' ? 'secondary' : 'outline'}>{member.status}</Badge>

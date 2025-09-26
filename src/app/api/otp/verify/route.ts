@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error verifying OTP:', error);
     return NextResponse.json(
       { error: 'Failed to verify OTP' },

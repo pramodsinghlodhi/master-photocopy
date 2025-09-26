@@ -167,7 +167,7 @@ export function useFileUpload(options: UseFileUploadOptions = {}) {
         xhr.timeout = 5 * 60 * 1000; // 5 minutes timeout
         xhr.send(formData);
       });
-    } catch (error) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Upload failed';
       updateUpload(id, { error: errorMessage, isUploading: false });
       options.onUploadError?.(id, errorMessage);

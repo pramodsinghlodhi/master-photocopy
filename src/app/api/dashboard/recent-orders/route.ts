@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
       data: recentOrders
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Recent orders error:', error);
     
     return NextResponse.json(

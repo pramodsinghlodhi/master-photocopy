@@ -25,7 +25,7 @@ export async function GET() {
       timestamp: new Date().toISOString()
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error checking service health:', error);
     return NextResponse.json(
       { error: 'Failed to check service health' },
@@ -42,7 +42,7 @@ async function checkAuthHealth() {
       status: 'active',
       details: 'Authentication service is available'
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       available: false,
       status: 'error',
@@ -68,7 +68,7 @@ async function checkFirestoreHealth() {
       status: 'not_configured',
       details: 'Firestore not configured'
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       available: false,
       status: 'error',
@@ -85,7 +85,7 @@ async function checkStorageHealth() {
       status: 'active',
       details: 'Cloud Storage is available'
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       available: false,
       status: 'error',
@@ -102,7 +102,7 @@ async function checkRealtimeDbHealth() {
       status: 'active',
       details: 'Realtime Database service is available'
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       available: false,
       status: 'error',
@@ -118,7 +118,7 @@ async function checkFunctionsHealth() {
       status: 'active',
       details: 'Cloud Functions are available'
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       available: false,
       status: 'error',
@@ -134,7 +134,7 @@ async function checkRemoteConfigHealth() {
       status: 'active',
       details: 'Remote Config is available'
     };
-  } catch (error) {
+  } catch (error: any) {
     return {
       available: false,
       status: 'error',

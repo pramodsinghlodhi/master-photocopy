@@ -84,7 +84,7 @@ export function verifyAccessToken(token: string): UserPayload | null {
       audience: 'master-photocopy-users'
     }) as UserPayload;
     return decoded;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Access token verification failed:', error);
     return null;
   }
@@ -100,7 +100,7 @@ export function verifyRefreshToken(token: string): Pick<UserPayload, 'id' | 'ema
       audience: 'master-photocopy-users'
     }) as Pick<UserPayload, 'id' | 'email'>;
     return decoded;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Refresh token verification failed:', error);
     return null;
   }

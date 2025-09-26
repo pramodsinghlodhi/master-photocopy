@@ -64,7 +64,7 @@ export class FirebaseStorageService {
         this.settingsLastFetched = now;
         return this.uploadSettings!;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn('Failed to fetch upload settings, using defaults:', error);
     }
 

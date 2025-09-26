@@ -73,7 +73,7 @@ const aiUpsellTriggersFlow = ai?.defineFlow(
     inputSchema: AiUpsellTriggersInputSchema,
     outputSchema: AiUpsellTriggersOutputSchema,
   },
-  async input => {
+  async (input: any) => {
     const {output} = await prompt!(input);
     return output!;
   }

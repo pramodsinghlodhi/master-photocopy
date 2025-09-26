@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Order management API error:', error);
     return NextResponse.json(
       { error: 'Failed to process request' },
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Order assignment error:', error);
     return NextResponse.json(
       { error: 'Failed to process assignment' },

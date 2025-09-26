@@ -78,7 +78,7 @@ class ShiprocketService {
       });
 
       return response.data.token;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Shiprocket auth error:", error);
       throw new Error("Failed to authenticate with Shiprocket");
     }
@@ -199,7 +199,7 @@ class ShiprocketService {
       );
 
       return response.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Shiprocket tracking error:", error);
       throw error;
     }
@@ -256,7 +256,7 @@ class ShiprocketService {
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Shiprocket webhook processing error:", error);
       throw error;
     }

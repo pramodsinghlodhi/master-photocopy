@@ -24,7 +24,7 @@ export class ChatbotService {
       await this.saveMessage(senderId, response.text, 'bot');
       
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error processing chatbot message:', error);
       return {
         text: "I'm sorry, I'm having trouble understanding. Please try again or contact our support team.",
@@ -121,7 +121,7 @@ export class ChatbotService {
           };
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error handling order status inquiry:', error);
       return {
         text: "I'm having trouble checking your order status. Please try again later.",
@@ -341,7 +341,7 @@ You can also type your question and I'll do my best to help!`,
       'Cancelled': 'This order has been cancelled.'
     };
     
-    return messages[status] || 'Status updated.';
+    return messages[status as keyof typeof messages] || 'Status updated.';
   }
 
   // Get user context
@@ -349,7 +349,7 @@ You can also type your question and I'll do my best to help!`,
     try {
       const userDoc = await this.db.collection('users').doc(userId).get();
       return userDoc.exists ? userDoc.data() : {};
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting user context:', error);
       return {};
     }
@@ -368,7 +368,7 @@ You can also type your question and I'll do my best to help!`,
         orderId: doc.id,
         ...doc.data()
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting recent orders:', error);
       return [];
     }
@@ -383,7 +383,7 @@ You can also type your question and I'll do my best to help!`,
         sender,
         timestamp: admin.firestore.FieldValue.serverTimestamp()
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving chat message:', error);
     }
   }
@@ -401,7 +401,7 @@ You can also type your question and I'll do my best to help!`,
         id: doc.id,
         ...doc.data()
       })).reverse();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting chat history:', error);
       return [];
     }
@@ -447,7 +447,7 @@ Just let me know your preferences or click "Configure Order" below!`,
           actions: ['configure_order', 'add_more_files']
         }
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error handling file upload:', error);
       return {
         text: "Sorry, there was an error processing your file. Please try again.",

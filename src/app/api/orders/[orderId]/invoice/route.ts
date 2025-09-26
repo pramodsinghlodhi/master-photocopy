@@ -56,7 +56,7 @@ export async function GET(
       data: invoiceData
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating invoice data:', error);
     return NextResponse.json(
       { error: 'Failed to generate invoice data' },

@@ -58,7 +58,7 @@ export class LoginTracker {
         city: 'Unknown',
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to get location info:', error);
       return {
         ip,

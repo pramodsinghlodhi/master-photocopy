@@ -42,7 +42,7 @@ export function parseJWTPayload(token: string): UserPayload | null {
       role: parsed.role,
       name: parsed.name
     };
-  } catch (error) {
+  } catch (error: any) {
     console.warn('Token parsing failed:', error);
     return null;
   }

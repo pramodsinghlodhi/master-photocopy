@@ -27,7 +27,7 @@ export function useAdminAuth() {
           } else {
             setIsAdmin(false);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error fetching user data:', error);
           setIsAdmin(false);
         }

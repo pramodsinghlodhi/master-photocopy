@@ -27,7 +27,7 @@ export const createAdminUser = functions.https.onCall(async (data, context) => {
     try {
       userRecord = await auth.getUserByEmail(email);
       console.log('User already exists, updating admin privileges...');
-    } catch (error) {
+    } catch (error: any) {
       if (error.code === 'auth/user-not-found') {
         // Create new user
         userRecord = await auth.createUser({
@@ -84,7 +84,7 @@ export const createAdminUser = functions.https.onCall(async (data, context) => {
       name: name
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating admin user:', error);
     
     if (error instanceof functions.https.HttpsError) {
@@ -138,7 +138,7 @@ export const makeUserAdmin = functions.https.onCall(async (data, context) => {
       userId: userId
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error making user admin:', error);
     throw new functions.https.HttpsError('internal', 'Failed to promote user to admin: ' + error.message);
   }
@@ -167,7 +167,7 @@ export const listAdminUsers = functions.https.onCall(async (data, context) => {
       adminUsers: adminUsers
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error listing admin users:', error);
     throw new functions.https.HttpsError('internal', 'Failed to list admin users: ' + error.message);
   }

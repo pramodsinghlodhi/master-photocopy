@@ -50,7 +50,7 @@ class EmailService {
         default:
           throw new Error(`Unsupported email provider: ${this.config.provider}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending email:', error);
       return false;
     }
@@ -70,7 +70,7 @@ class EmailService {
         })
       });
       return response.ok;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Firebase email error:', error);
       return false;
     }
@@ -99,7 +99,7 @@ class EmailService {
         })
       });
       return response.ok;
-    } catch (error) {
+    } catch (error: any) {
       console.error('SendGrid email error:', error);
       return false;
     }
@@ -127,7 +127,7 @@ class EmailService {
         body: formData
       });
       return response.ok;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Mailgun email error:', error);
       return false;
     }
@@ -147,7 +147,7 @@ class EmailService {
         })
       });
       return response.ok;
-    } catch (error) {
+    } catch (error: any) {
       console.error('SES email error:', error);
       return false;
     }
@@ -166,7 +166,7 @@ class EmailService {
         })
       });
       return response.ok;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Nodemailer email error:', error);
       return false;
     }

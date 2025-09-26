@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
       total: customersResponse.length
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Customers list error:', error);
     
     return NextResponse.json(

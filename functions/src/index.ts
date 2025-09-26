@@ -39,7 +39,7 @@ app.post("/orders/create", async (req, res) => {
     const order = await orderService.createOrder(req.body);
     await pushService.sendOrderConfirmation(order);
     res.json({ success: true, order });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -51,7 +51,7 @@ app.post("/orders/:orderId/update-status", async (req, res) => {
     const order = await orderService.updateOrderStatus(orderId, status, agentId);
     await pushService.sendStatusUpdate(order);
     res.json({ success: true, order });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -63,7 +63,7 @@ app.post("/orders/:orderId/assign-agent", async (req, res) => {
     const assignment = await orderService.assignAgent(orderId, agentId);
     await pushService.sendAgentAssignment(assignment);
     res.json({ success: true, assignment });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -74,7 +74,7 @@ app.post("/agents/register", async (req, res) => {
     const agent = await agentService.registerAgent(req.body);
     await pushService.sendAgentWelcome(agent);
     res.json({ success: true, agent });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -85,7 +85,7 @@ app.post("/agents/:agentId/update-location", async (req, res) => {
     const { latitude, longitude } = req.body;
     await agentService.updateAgentLocation(agentId, { latitude, longitude });
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -96,7 +96,7 @@ app.post("/agents/:agentId/update-status", async (req, res) => {
     const { status } = req.body;
     await agentService.updateAgentStatus(agentId, status);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -106,7 +106,7 @@ app.post("/payments/create-order", async (req, res) => {
   try {
     const paymentOrder = await paymentService.createRazorpayOrder(req.body);
     res.json({ success: true, paymentOrder });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -119,7 +119,7 @@ app.post("/payments/verify", async (req, res) => {
       await pushService.sendPaymentConfirmation(verification.orderId);
     }
     res.json(verification);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -129,7 +129,7 @@ app.post("/delivery/shiprocket/create", async (req, res) => {
   try {
     const shipment = await deliveryService.createDeliveryAssignment(req.body);
     res.json({ success: true, shipment });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -139,7 +139,7 @@ app.post("/delivery/assign-own", async (req, res) => {
     const assignment = await deliveryService.createDeliveryAssignment(req.body);
     await pushService.sendDeliveryAssignment(assignment);
     res.json({ success: true, assignment });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -149,7 +149,7 @@ app.post("/chatbot/message", async (req, res) => {
   try {
     const response = await chatbotService.processMessage(req.body);
     res.json({ success: true, response });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -158,7 +158,7 @@ app.get("/chatbot/suggestions", async (req, res) => {
   try {
     const suggestions = await chatbotService.getChatHistory(req.query.userId as string, 10);
     res.json({ success: true, suggestions });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -169,7 +169,7 @@ app.post("/notifications/subscribe", async (req, res) => {
     const { userId, token, topics } = req.body;
     await pushService.subscribeToTopics(userId, token, topics);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -178,7 +178,7 @@ app.post("/notifications/send", async (req, res) => {
   try {
     const result = await pushService.sendCustomNotification(req.body);
     res.json({ success: true, result });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -188,7 +188,7 @@ app.post("/webhooks/shiprocket", async (req, res) => {
   try {
     await deliveryService.updateDeliveryStatus(req.body.assignmentId, req.body.status, req.body);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -197,7 +197,7 @@ app.post("/webhooks/payment", async (req, res) => {
   try {
     await paymentService.handlePaymentWebhook(req.body);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -206,7 +206,7 @@ app.post("/webhooks/whatsapp", async (req, res) => {
   try {
     await chatbotService.processMessage(req.body);
     res.json({ success: true });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -216,7 +216,7 @@ app.get("/analytics/orders", async (req, res) => {
   try {
     const analytics = await orderService.getOrderAnalytics(req.query);
     res.json({ success: true, analytics });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
@@ -225,7 +225,7 @@ app.get("/analytics/agents", async (req, res) => {
   try {
     const analytics = await agentService.getAgentAnalytics(req.query);
     res.json({ success: true, analytics });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });

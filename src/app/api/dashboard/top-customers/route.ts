@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
       data: topCustomers
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Top customers error:', error);
     
     return NextResponse.json(

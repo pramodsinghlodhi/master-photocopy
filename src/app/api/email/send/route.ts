@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Email API error:', error);
     return NextResponse.json(
       { error: 'Failed to send email' },
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
 async function handleNodemailer(data: any) {
   try {
     // Configure your SMTP settings
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: false, // true for 465, false for other ports
@@ -56,7 +56,7 @@ async function handleNodemailer(data: any) {
       success: true,
       messageId: result.messageId
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Nodemailer error:', error);
     return NextResponse.json(
       { error: 'Failed to send email via Nodemailer' },
@@ -76,7 +76,7 @@ async function handleFirebaseEmail(data: any) {
       success: true,
       provider: 'firebase'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Firebase email error:', error);
     return NextResponse.json(
       { error: 'Failed to send email via Firebase' },
@@ -95,7 +95,7 @@ async function handleSESEmail(data: any) {
       success: true,
       provider: 'ses'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('SES email error:', error);
     return NextResponse.json(
       { error: 'Failed to send email via SES' },

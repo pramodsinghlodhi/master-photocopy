@@ -18,7 +18,7 @@ export class PushNotificationService {
         await this.messaging.subscribeToTopic(token, topics[0]);
         console.log(`User ${userId} subscribed to topics:`, topics);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error subscribing to topics:', error);
       throw error;
     }
@@ -53,7 +53,7 @@ export class PushNotificationService {
 
     const notification = {
       title: `Order ${order.status} 📦`,
-      body: statusMessages[order.status] || `Order status updated to ${order.status}`,
+      body: statusMessages[order.status as keyof typeof statusMessages] || `Order status updated to ${order.status}`,
       data: {
         orderId: order.orderId,
         status: order.status,
@@ -267,7 +267,7 @@ export class PushNotificationService {
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending notification:', error);
     }
   }
@@ -283,7 +283,7 @@ export class PushNotificationService {
         read: false,
         createdAt: admin.firestore.FieldValue.serverTimestamp()
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving notification:', error);
     }
   }

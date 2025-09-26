@@ -20,6 +20,7 @@ export type SupportTicket = {
     date: string;
     status: TicketStatus;
     priority: 'Low' | 'Medium' | 'High';
+    details?: string;
 };
 
 export type StaffRole = 'Admin' | 'Manager' | 'Support';

@@ -114,7 +114,7 @@ export function safeToDate(timestamp: any): Date | null {
     }
     
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.warn('Failed to convert timestamp:', timestamp, error);
     return null;
   }

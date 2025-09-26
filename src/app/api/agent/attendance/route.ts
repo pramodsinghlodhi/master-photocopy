@@ -24,7 +24,7 @@ function safeToDate(timestamp: any): Date | null {
     }
     
     return null;
-  } catch (error) {
+  } catch (error: any) {
     console.warn('Failed to convert timestamp:', timestamp, error);
     return null;
   }
@@ -104,8 +104,8 @@ export async function GET(request: NextRequest) {
             id: doc.id,
             agentId: data.agentId || agentId,
             date: data.date || doc.id.split('_')[1], // Extract date from document ID if needed
-            checkInTime: safeToDate(data.checkInTime),
-            checkOutTime: safeToDate(data.checkOutTime),
+            checkInTime: safeToDate(data.checkInTime) || undefined,
+            checkOutTime: safeToDate(data.checkOutTime) || undefined,
             breaks: data.breaks?.map((b: any) => ({
               ...b,
               startTime: safeToDate(b.startTime),
@@ -203,7 +203,7 @@ export async function GET(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Attendance API error:', error);
     return NextResponse.json(
       { error: 'Failed to process request' },
@@ -403,7 +403,7 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Attendance action error:', error);
     return NextResponse.json(
       { error: 'Failed to process attendance action' },

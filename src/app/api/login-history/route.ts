@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching login history:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },

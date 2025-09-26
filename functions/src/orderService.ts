@@ -169,7 +169,7 @@ class OrderService {
       }
 
       console.log(`Auto-assigned ${unassignedOrders.size} orders to ${agents.length} agents`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Auto assignment error:", error);
     }
   }
@@ -239,7 +239,7 @@ class OrderService {
       }
 
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error("OTP validation error:", error);
       return false;
     }
@@ -272,7 +272,7 @@ class OrderService {
         }
       });
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("OTP generation error:", error);
     }
   }
@@ -291,7 +291,7 @@ class OrderService {
 
       // Update order metrics or trigger post-delivery workflows
       console.log(`Order ${orderId} delivery completed`);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Delivery completion handling error:", error);
     }
   }

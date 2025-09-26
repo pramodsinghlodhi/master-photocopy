@@ -52,7 +52,7 @@ class SMSService {
         default:
           throw new Error(`Unsupported SMS provider: ${this.config.provider}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending SMS:', error);
       return false;
     }
@@ -71,7 +71,7 @@ class SMSService {
         })
       });
       return response.ok;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Firebase SMS error:', error);
       return false;
     }
@@ -93,7 +93,7 @@ class SMSService {
         })
       });
       return response.ok;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Twilio SMS error:', error);
       return false;
     }
@@ -123,7 +123,7 @@ class SMSService {
 
       const result = await response.json();
       return result.return === true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Fast2SMS error:', error);
       return false;
     }
@@ -151,7 +151,7 @@ class SMSService {
 
       const result = await response.json();
       return result.status === 'success';
-    } catch (error) {
+    } catch (error: any) {
       console.error('Textlocal SMS error:', error);
       return false;
     }
@@ -179,7 +179,7 @@ class SMSService {
 
       const result = await response.json();
       return result.type === 'success';
-    } catch (error) {
+    } catch (error: any) {
       console.error('MSG91 SMS error:', error);
       return false;
     }
@@ -216,7 +216,7 @@ class SMSService {
       }
 
       return { success: false };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending OTP:', error);
       return { success: false };
     }
@@ -237,7 +237,7 @@ class SMSService {
           expiryTime: expiryTime.toISOString()
         })
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error storing OTP:', error);
     }
   }
@@ -255,7 +255,7 @@ class SMSService {
 
       const result = await response.json();
       return result.valid === true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error verifying OTP:', error);
       return false;
     }

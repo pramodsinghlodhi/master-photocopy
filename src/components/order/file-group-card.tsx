@@ -204,7 +204,7 @@ export function FileGroupCard({
                                     </div>
                                     <div className="grid gap-2">
                                         <Label className="flex items-center gap-2 text-xs"><Zap className="h-4 w-4"/> Binding</Label>
-                                        <Select value={settings.binding} onValueChange={(val) => handleSettingChange('binding', val)}>
+                                        <Select value={settings.binding} onValueChange={(val) => handleSettingChange('binding', val as any)}>
                                             <SelectTrigger className='h-9'>
                                                 <SelectValue placeholder="Select binding" />
                                             </SelectTrigger>

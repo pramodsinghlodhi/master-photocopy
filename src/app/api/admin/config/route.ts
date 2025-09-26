@@ -58,7 +58,7 @@ export async function GET() {
 
     return NextResponse.json(configDoc.data());
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching admin config:', error);
     return NextResponse.json(
       { error: 'Failed to fetch configuration' },
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       message: 'Configuration updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating admin config:', error);
     return NextResponse.json(
       { error: 'Failed to update configuration' },
@@ -104,7 +104,7 @@ export async function PATCH(request: NextRequest) {
       message: 'Configuration updated successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating admin config:', error);
     return NextResponse.json(
       { error: 'Failed to update configuration' },

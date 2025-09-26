@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     if (isFirebaseConfigured && auth) {
       try {
         await signOut(auth);
-      } catch (error) {
+      } catch (error: any) {
         console.warn('Firebase signout error:', error);
         // Continue with logout even if Firebase signout fails
       }

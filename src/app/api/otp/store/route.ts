@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       message: 'OTP stored successfully'
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error storing OTP:', error);
     return NextResponse.json(
       { error: 'Failed to store OTP' },

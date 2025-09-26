@@ -26,7 +26,7 @@ const loadUsers = (): Map<string, User> => {
       const usersArray = JSON.parse(data);
       return new Map(usersArray.map((user: User) => [user.id, user]));
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading users:', error);
   }
   return new Map();
@@ -37,7 +37,7 @@ const saveUsers = (users: Map<string, User>) => {
   try {
     const usersArray = Array.from(users.values());
     fs.writeFileSync(USERS_FILE, JSON.stringify(usersArray, null, 2));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving users:', error);
   }
 };

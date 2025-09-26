@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
           lastUpdated: statusDoc.data()?.lastUpdated?.toDate() || new Date(),
           lastCheckIn: statusDoc.data()?.lastCheckIn?.toDate(),
           lastCheckOut: statusDoc.data()?.lastCheckOut?.toDate(),
-        } as AgentStatus : null;
+        } as unknown as AgentStatus : null;
 
         return NextResponse.json({
           success: true,
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Agent status API error:', error);
     return NextResponse.json(
       { error: 'Failed to process request' },
@@ -219,7 +219,7 @@ export async function POST(request: NextRequest) {
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Agent status update error:', error);
     return NextResponse.json(
       { error: 'Failed to update agent status' },

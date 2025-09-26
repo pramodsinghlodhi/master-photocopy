@@ -76,7 +76,7 @@ export class DeliveryService {
         assignmentId: assignmentRef.id,
         assignment: assignmentData
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating delivery assignment:', error);
       throw error;
     }
@@ -116,7 +116,7 @@ export class DeliveryService {
       }
       
       return { success: true, assignmentId, status };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating delivery status:', error);
       throw error;
     }
@@ -300,7 +300,7 @@ export class DeliveryService {
       // For now, return random agent
       // In production, implement location-based or performance-based selection
       return agents[Math.floor(Math.random() * agents.length)];
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error finding available agent:', error);
       return null;
     }
@@ -414,7 +414,7 @@ export class DeliveryService {
       };
       
       return analytics;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting delivery analytics:', error);
       throw error;
     }
@@ -474,7 +474,7 @@ export class DeliveryService {
       await batch.commit();
       
       return { success: true, updated: assignmentIds.length };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error bulk updating assignments:', error);
       throw error;
     }
@@ -521,7 +521,7 @@ export class DeliveryService {
       await this.sendReassignmentNotifications(assignment?.orderId, newAgentId, reason);
       
       return { success: true, assignmentId, newAgentId };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error reassigning delivery:', error);
       throw error;
     }

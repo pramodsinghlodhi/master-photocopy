@@ -42,7 +42,7 @@ const createShipmentFlow = ai.defineFlow(
     inputSchema: CreateShipmentInputSchema,
     outputSchema: CreateShipmentOutputSchema,
   },
-  async (input) => {
+  async (input: any) => {
     console.log("Attempting to create shipment for order:", input.orderId);
 
     // To connect to the real Shiprocket API, you would uncomment and configure the following:
@@ -124,7 +124,7 @@ const createShipmentFlow = ai.defineFlow(
             status: 'Booked'
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Shiprocket API Error:", error.response?.data || error.message);
         throw new Error("Failed to create shipment with Shiprocket.");
     }

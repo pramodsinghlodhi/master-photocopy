@@ -109,7 +109,7 @@ export async function GET(
             }, { status: 500 });
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error accessing file:', error);
         return NextResponse.json({ 
           error: 'File access error',
@@ -119,7 +119,7 @@ export async function GET(
     }
     
     return NextResponse.json({ files });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in GET /api/orders/[orderId]/files:', error);
     return NextResponse.json(
       { error: 'Failed to fetch files' },

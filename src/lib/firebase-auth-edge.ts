@@ -45,7 +45,7 @@ export function parseFirebaseToken(token: string): UserPayload | null {
       role,
       name: parsed.name
     };
-  } catch (error) {
+  } catch (error: any) {
     console.warn('Firebase token parsing failed:', error);
     return null;
   }

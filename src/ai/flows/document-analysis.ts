@@ -35,7 +35,7 @@ export async function analyzeDocument(input: AnalyzeDocumentInput): Promise<Anal
   
   try {
     return await analyzeDocumentFlow(input);
-  } catch (error) {
+  } catch (error: any) {
     console.warn('AI document analysis failed, using fallback:', error);
     return getFallbackAnalysis();
   }

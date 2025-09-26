@@ -155,17 +155,17 @@ class FirebaseServicesManager {
   private async initializeServices() {
     try {
       // Analytics
-      if (this.serviceConfig.analytics && typeof window !== 'undefined') {
+      if (this.serviceConfig.analytics && typeof window !== 'undefined' && app) {
         this.analytics = getAnalytics(app);
       }
 
       // Realtime Database
-      if (this.serviceConfig.realtimeDatabase) {
+      if (this.serviceConfig.realtimeDatabase && app) {
         this.realtimeDb = getDatabase(app);
       }
 
       // Functions
-      if (this.serviceConfig.functions) {
+      if (this.serviceConfig.functions && app) {
         this.functions = getFunctions(app);
         
         // Connect to emulator in development
@@ -174,7 +174,7 @@ class FirebaseServicesManager {
         }
       }
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error initializing Firebase services:', error);
     }
   }
@@ -191,7 +191,7 @@ class FirebaseServicesManager {
           updatedAt: serverTimestamp(),
           updatedBy: 'admin'
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error saving service config:', error);
       }
     }
@@ -211,7 +211,7 @@ class FirebaseServicesManager {
           updatedAt: serverTimestamp(),
           updatedBy: 'admin'
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error saving communication config:', error);
       }
     }
@@ -236,7 +236,7 @@ class FirebaseServicesManager {
       }
 
       await this.initializeServices();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading configuration:', error);
     }
   }
@@ -267,7 +267,7 @@ class FirebaseServicesManager {
       }
 
       return user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating user:', error);
       throw error;
     }
@@ -287,7 +287,7 @@ class FirebaseServicesManager {
       }
 
       return userCredential.user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error signing in user:', error);
       throw error;
     }
@@ -301,7 +301,7 @@ class FirebaseServicesManager {
     try {
       await sendPasswordResetEmail(this.auth, email);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error sending password reset email:', error);
       throw error;
     }
@@ -322,7 +322,7 @@ class FirebaseServicesManager {
       const verificationId = await provider.verifyPhoneNumber(phoneNumber, recaptchaVerifier);
       
       return verificationId;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error initiating phone auth:', error);
       throw error;
     }
@@ -338,7 +338,7 @@ class FirebaseServicesManager {
       const userCredential = await signInWithCredential(this.auth, credential);
       
       return userCredential.user;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error verifying phone OTP:', error);
       throw error;
     }
@@ -364,7 +364,7 @@ class FirebaseServicesManager {
         });
         return docRef.id;
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating document:', error);
       throw error;
     }
@@ -381,7 +381,7 @@ class FirebaseServicesManager {
         updatedAt: serverTimestamp()
       });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating document:', error);
       throw error;
     }
@@ -395,7 +395,7 @@ class FirebaseServicesManager {
     try {
       const docSnap = await getDoc(doc(this.firestore, collectionName, id));
       return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting document:', error);
       throw error;
     }
@@ -427,9 +427,9 @@ class FirebaseServicesManager {
       const querySnapshot = await getDocs(queryRef);
       return querySnapshot.docs.map(docSnapshot => ({ 
         id: docSnapshot.id, 
-        ...docSnapshot.data() 
+        ...docSnapshot.data() as any
       }));
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error querying documents:', error);
       throw error;
     }
@@ -452,7 +452,7 @@ class FirebaseServicesManager {
         size: snapshot.metadata.size,
         contentType: snapshot.metadata.contentType
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading file:', error);
       throw error;
     }
@@ -467,7 +467,7 @@ class FirebaseServicesManager {
       const storageRef = ref(this.storage, path);
       await deleteObject(storageRef);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting file:', error);
       throw error;
     }
@@ -494,7 +494,7 @@ class FirebaseServicesManager {
       );
 
       return files;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error listing files:', error);
       throw error;
     }
@@ -509,7 +509,7 @@ class FirebaseServicesManager {
     try {
       await set(dbRef(this.realtimeDb, path), data);
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error setting realtime data:', error);
       throw error;
     }
@@ -523,7 +523,7 @@ class FirebaseServicesManager {
     try {
       const snapshot = await get(dbRef(this.realtimeDb, path));
       return snapshot.exists() ? snapshot.val() : null;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting realtime data:', error);
       throw error;
     }
@@ -561,7 +561,7 @@ class FirebaseServicesManager {
       const callable = httpsCallable(this.functions, functionName);
       const result = await callable(data);
       return result.data;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error calling function:', error);
       throw error;
     }

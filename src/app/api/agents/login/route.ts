@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
         createdAt: serverTimestamp()
       });
 
-      console.log(`Agent login session created: ${agentData.agentId} - ${deviceInfo.type} ${deviceInfo.browser}`);
+      console.log(`Agent login session created: ${agentData.agentId} - ${(deviceInfo as any).type} ${(deviceInfo as any).browser}`);
     } catch (sessionError) {
       console.error('Failed to save login session:', sessionError);
       // Don't fail the login if session tracking fails
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in agent login:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },

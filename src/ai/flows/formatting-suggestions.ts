@@ -71,7 +71,7 @@ const formattingSuggestionsFlow = ai?.defineFlow(
     inputSchema: FormattingSuggestionsInputSchema,
     outputSchema: FormattingSuggestionsOutputSchema,
   },
-  async input => {
+  async (input: any) => {
     const {output} = await prompt!(input);
     return output!;
   }

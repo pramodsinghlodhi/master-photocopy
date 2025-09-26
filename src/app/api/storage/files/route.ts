@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     let parsedMetadata;
     try {
       parsedMetadata = metadata ? JSON.parse(metadata) : {};
-    } catch (error) {
+    } catch (error: any) {
       parsedMetadata = {};
     }
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       data: result,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error uploading file:', error);
     return NextResponse.json(
       { error: 'Failed to upload file' },
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error getting file:', error);
     return NextResponse.json(
       { error: 'Failed to get file' },
@@ -119,7 +119,7 @@ export async function DELETE(request: NextRequest) {
       data: result,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error deleting file:', error);
     return NextResponse.json(
       { error: 'Failed to delete file' },

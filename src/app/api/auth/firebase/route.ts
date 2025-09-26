@@ -24,7 +24,7 @@ function parseFirebaseIdToken(idToken: string) {
     }
 
     return parsed;
-  } catch (error) {
+  } catch (error: any) {
     throw new Error('Token parsing failed: ' + error);
   }
 }

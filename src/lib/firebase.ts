@@ -33,7 +33,7 @@ if (isFirebaseConfigured) {
     try {
         // Get existing app or create new one
         app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error initializing Firebase app:', error);
         app = null;
     }
@@ -49,7 +49,7 @@ if (app) {
         auth = getAuth(app);
         db = getFirestore(app);
         storage = getStorage(app);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error initializing Firebase services:', error);
     }
 }
@@ -71,7 +71,7 @@ if (app && auth && db && storage && useEmulator && typeof window !== 'undefined'
         
         emulatorsConnected = true;
         console.log('Connected to Firebase emulators');
-    } catch (error) {
+    } catch (error: any) {
         console.warn('Emulators already connected or failed to connect:', error);
     }
 }

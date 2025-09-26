@@ -95,7 +95,7 @@ export async function GET(
       },
     });
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in bulk download:', error);
     return NextResponse.json(
       { 
